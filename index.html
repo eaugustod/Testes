@@ -303,6 +303,56 @@ const supabase = window.supabase.createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV6a2ZuYnJscW5ydXltaGhmZWVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMjg1MzAsImV4cCI6MjA5MDgwNDUzMH0.llrWSk5Kz-UvTPWY5fpeO7QD-aFaobcvAP9FxH8PhB4'
 );
 
+// ===== NORMALIZAÇÃO + CACHE PACIENTES =====
+function normalizarNome(nome){
+  return (nome || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g,' ')
+    .trim();
+}
+
+let pacientesCache = [];
+
+async function carregarPacientesCache(){
+  const { data, error } = await supabase
+    .from('pacientes')
+    .select('id, nome');
+
+  if(error){
+    console.error('Erro ao carregar pacientes:', error);
+    return;
+  }
+
+  pacientesCache = data.map(p => ({
+    id: p.id,
+    nome: p.nome,
+    nome_normalizado: normalizarNome(p.nome)
+  }));
+}
+
+function encontrarPacienteId(nomeBusca){
+  const nomeNorm = normalizarNome(nomeBusca);
+
+  let paciente = pacientesCache.find(p => p.nome_normalizado === nomeNorm);
+  if(paciente) return paciente.id;
+
+  paciente = pacientesCache.find(p => p.nome_normalizado.includes(nomeNorm));
+  if(paciente) return paciente.id;
+
+  paciente = pacientesCache.find(p => nomeNorm.includes(p.nome_normalizado));
+  if(paciente) return paciente.id;
+
+  paciente = pacientesCache.find(p =>
+    nomeNorm.split(' ').some(parte =>
+      p.nome_normalizado.includes(parte)
+    )
+  );
+
+  return paciente ? paciente.id : null;
+}
+
 // ── CONFIG ────────────────────────────────────────────────────────
 let cfg={sheetId:'',apiKey:'',sessSheet:'Sessões',regSheet:'Registros',therapist:''};
 function loadCfg(){try{const s=localStorage.getItem('ac3');if(s)cfg={...cfg,...JSON.parse(s)};}catch(e){}}
@@ -767,7 +817,7 @@ if (resp.status === "ok") {
   lockCard(row,presenca,evolucao);
   showToast('✅ Sessão salva com sucesso!');
 
-  // ===== SUPABASE HISTORICO (CORRETO) =====
+// ===== SUPABASE HISTORICO =====
 try {
 
   const nomePaciente = sess.patient;
@@ -779,30 +829,20 @@ try {
 
   const profissional = cfg.therapist || '';
 
-  // 🔎 Buscar paciente
-  const { data: pacienteData, error: erroPaciente } = await supabase
-    .from('pacientes')
-    .select('id')
-    .ilike('nome', nomePaciente)
-    .limit(1)
-    .single();
+  // 🔎 BUSCA INTELIGENTE (CACHE)
+  const pac_id = encontrarPacienteId(nomePaciente);
 
-  if (erroPaciente || !pacienteData) {
-    console.error('Paciente não encontrado:', nomePaciente);
-    return;
+  if(!pac_id){
+  console.warn('Paciente não encontrado, salvando sem vínculo:', nomePaciente);
   }
 
-  const pac_id = pacienteData.id;
-
-  // 📅 Semana
   const mesNome = dataHoje.toLocaleString('pt-BR', { month: 'long' });
   const semana = `${mesNome.charAt(0).toUpperCase() + mesNome.slice(1)} Semana ${Math.ceil(dataHoje.getDate() / 7)}`;
 
-  // 🧾 Título
   const dataBR = dataHoje.toLocaleDateString('pt-BR');
+
   const titulo = `✓ Sessão — ${dataBR} · ${hora} · ${semana}`;
 
-  // 🧾 Conteúdo
   const conteudo = {
     texto: texto,
     semana: semana,
@@ -813,19 +853,20 @@ try {
     presenca: presenca
   };
 
-  // 💾 Insert
   const { error: erroInsert } = await supabase
-    .from('historico')
-    .insert([{
-      pac_id,
-      tipo: "evolucao",
-      titulo,
-      conteudo,
-      prof_id: null,
-      data: dataISO,
-      status: null,
-      fonte: "Agenda"
-    }]);
+  .from('historico')
+  .upsert([{
+    pac_id: pac_id || null,
+    tipo: "evolucao",
+    titulo,
+    conteudo,
+    prof_id: null,
+    data: dataISO,
+    status: null,
+    fonte: "Agenda"
+  }], {
+    onConflict: ['pac_id','data','titulo']
+  });
 
   if (erroInsert) {
     console.error('Erro historico:', erroInsert);
@@ -834,7 +875,7 @@ try {
   }
 
 } catch (err) {
-  console.error('Erro geral supabase:', err);
+  console.error('Erro supabase:', err);
 }
 
   
@@ -1160,7 +1201,9 @@ function showToast(msg,dur=2800){
 function updateBadge(){document.getElementById('thBadge').textContent=cfg.therapist||'Terapeuta';}
 
 // ── INIT ──────────────────────────────────────────────────────────
-function init(){loadCfg();buildWeek();buildYears();updateBadge();switchView('agenda');fetchSessions();}
+async function init(){loadCfg();buildWeek();buildYears();updateBadge();switchView('agenda');
+await carregarPacientesCache(); // 🔥 IMPORTANTE
+fetchSessions();}
 init();
   if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js');
