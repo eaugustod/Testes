@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -296,71 +295,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--s100);color:var(--tp);min
 
 <div class="toast" id="toast"></div>
 
-
 <script>
-
-// 🔒 NÃO USA CONST (EVITA ERRO DE DUPLICAÇÃO)
-var supabase = window.supabaseClient;
-
-if (!supabase) {
-  const { createClient } = supabaseJs;
-  
-  supabase = createClient(
-  'https://ezkfnbrlqnruymhhfeei.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV6a2ZuYnJscW5ydXltaGhmZWVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMjg1MzAsImV4cCI6MjA5MDgwNDUzMH0.llrWSk5Kz-UvTPWY5fpeO7QD-aFaobcvAP9FxH8PhB4'  );
-  window.supabaseClient = supabase;
-}
-
-// ===== NORMALIZAÇÃO + CACHE PACIENTES =====
-function normalizarNome(nome){
-  return (nome || '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/\s+/g,' ')
-    .trim();
-}
-
-let pacientesCache = [];
-
-async function carregarPacientesCache(){
-  const { data, error } = await supabase
-    .from('pacientes')
-    .select('id, nome');
-
-  if(error){
-    console.error('Erro ao carregar pacientes:', error);
-    return;
-  }
-
-  pacientesCache = data.map(p => ({
-    id: p.id,
-    nome: p.nome,
-    nome_normalizado: normalizarNome(p.nome)
-  }));
-}
-
-function encontrarPacienteId(nomeBusca){
-  const nomeNorm = normalizarNome(nomeBusca);
-
-  let paciente = pacientesCache.find(p => p.nome_normalizado === nomeNorm);
-  if(paciente) return paciente.id;
-
-  paciente = pacientesCache.find(p => p.nome_normalizado.includes(nomeNorm));
-  if(paciente) return paciente.id;
-
-  paciente = pacientesCache.find(p => nomeNorm.includes(p.nome_normalizado));
-  if(paciente) return paciente.id;
-
-  paciente = pacientesCache.find(p =>
-    nomeNorm.split(' ').some(parte =>
-      p.nome_normalizado.includes(parte)
-    )
-  );
-
-  return paciente ? paciente.id : null;
-}
-
 // ── CONFIG ────────────────────────────────────────────────────────
 let cfg={sheetId:'',apiKey:'',sessSheet:'Sessões',regSheet:'Registros',therapist:''};
 function loadCfg(){try{const s=localStorage.getItem('ac3');if(s)cfg={...cfg,...JSON.parse(s)};}catch(e){}}
@@ -759,8 +694,6 @@ function togEvo(btn,row){btn.classList.toggle('open');document.getElementById('e
 */
 async function saveSession(row){
   const sess=sessions.find(s=>s.row===row);
-
-
   if(!sess){showToast('Sessão não encontrada');return;}
 
   const presenca=draftP[row]||sess.presenca;
@@ -822,71 +755,9 @@ const res = await fetch("https://autumn-recipe-ece3.eadonato.workers.dev/", {
 const resp = await res.json();
 
 if (resp.status === "ok") {
+  await salvarHistoricoSupabase(sess, presenca, evolucao);
   lockCard(row,presenca,evolucao);
   showToast('✅ Sessão salva com sucesso!');
-
-// ===== SUPABASE HISTORICO =====
-try {
-
-  const nomePaciente = sess.patient;
-  const texto = evolucao;
-  const hora = fmtT(sess.tStart);
-
-  const dataHoje = new Date(sess.date);
-  const dataISO = sess.date;
-
-  const profissional = cfg.therapist || '';
-
-  // 🔎 BUSCA INTELIGENTE (CACHE)
-  const pac_id = encontrarPacienteId(nomePaciente);
-
-  if(!pac_id){
-  console.warn('Paciente não encontrado, salvando sem vínculo:', nomePaciente);
-  }
-
-  const mesNome = dataHoje.toLocaleString('pt-BR', { month: 'long' });
-  const semana = `${mesNome.charAt(0).toUpperCase() + mesNome.slice(1)} Semana ${Math.ceil(dataHoje.getDate() / 7)}`;
-
-  const dataBR = dataHoje.toLocaleDateString('pt-BR');
-
-  const titulo = `✓ Sessão — ${dataBR} · ${hora} · ${semana}`;
-
-  const conteudo = {
-    texto: texto,
-    semana: semana,
-    duracao: sess.dur || "60",
-    horaFim: hora,
-    horaIni: hora,
-    convenio: sess.conv || "",
-    presenca: presenca
-  };
-
-  const { error: erroInsert } = await supabase
-  .from('historico')
-  .upsert([{
-    pac_id: pac_id || null,
-    tipo: "evolucao",
-    titulo,
-    conteudo,
-    prof_id: null,
-    data: dataISO,
-    status: null,
-    fonte: "Agenda"
-  }], {
-    onConflict: ['pac_id','data','titulo']
-  });
-
-  if (erroInsert) {
-    console.error('Erro historico:', erroInsert);
-  } else {
-    console.log('✔ Histórico salvo');
-  }
-
-} catch (err) {
-  console.error('Erro supabase:', err);
-}
-
-  
 } else {
   throw new Error(resp.error || "Erro desconhecido");
 }
@@ -898,6 +769,80 @@ try {
     }
     showToast('Erro ao salvar: '+e.message);
   }
+}
+
+async function salvarHistoricoSupabase(sess, presenca, evolucao){
+  try{
+    const SUPABASE_URL = "https://ezkfnbrlqnruymhhfeei.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV6a2ZuYnJscW5ydXltaGhmZWVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMjg1MzAsImV4cCI6MjA5MDgwNDUzMH0.llrWSk5Kz-UvTPWY5fpeO7QD-aFaobcvAP9FxH8PhB4";
+
+    // 🔹 buscar paciente
+    const pacienteRes = await fetch(`${SUPABASE_URL}/rest/v1/pacientes?nome=eq.${encodeURIComponent(sess.patient)}`, {
+      headers: {
+        "apikey": SUPABASE_KEY,
+        "Authorization": `Bearer ${SUPABASE_KEY}`
+      }
+    });
+
+    const pacienteData = await pacienteRes.json();
+    if(!pacienteData.length) throw new Error("Paciente não encontrado");
+
+    const pacienteId = pacienteData[0].id;
+
+    // 🔹 buscar profissional
+    const profRes = await fetch(`${SUPABASE_URL}/rest/v1/profissionais?nome=eq.${encodeURIComponent(cfg.therapist)}`, {
+      headers: {
+        "apikey": SUPABASE_KEY,
+        "Authorization": `Bearer ${SUPABASE_KEY}`
+      }
+    });
+
+    const profData = await profRes.json();
+    if(!profData.length) throw new Error("Profissional não encontrado");
+
+    const profissionalId = profData[0].id;
+
+    // 🔹 inserir histórico
+    const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/historico`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_KEY,
+        "Authorization": `Bearer ${SUPABASE_KEY}`,
+        "Prefer": "return=minimal"
+      },
+      body: JSON.stringify({
+        paciente_id: pacienteId,
+        profissional_id: profissionalId,
+        data: sess.date,
+        hora_inicio: sess.tStart,
+        hora_fim: sess.tEnd,
+        presenca: presenca,
+        evolucao: evolucao,
+        criado_em: new Date().toISOString()
+      })
+    });
+
+    if(!insertRes.ok){
+      const err = await insertRes.text();
+      throw new Error(err);
+    }
+
+    console.log("✅ Histórico salvo no Supabase");
+
+  }catch(e){
+    console.error("Erro ao salvar no Supabase:", e.message);
+  }
+}
+
+function normalizarTexto(txt){
+  return (txt || '')
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // remove acentos
+    .replace(/[^a-z0-9\s]/g, "")     // remove símbolos
+    .replace(/\s+/g, " ")            // espaços duplicados
+    .trim();
 }
 
 function lockCard(row,presenca,evolucao){
@@ -1209,20 +1154,7 @@ function showToast(msg,dur=2800){
 function updateBadge(){document.getElementById('thBadge').textContent=cfg.therapist||'Terapeuta';}
 
 // ── INIT ──────────────────────────────────────────────────────────
-async function init(){
-  loadCfg();
-  buildWeek();
-  buildYears();
-  updateBadge();
-  switchView('agenda');
-try {
-  carregarPacientesCache().catch(e=>{
-  console.warn('Erro cache:', e);
-});
-} catch(e){
-  console.warn('Erro ao carregar pacientes:', e);
-};
-fetchSessions();}
+function init(){loadCfg();buildWeek();buildYears();updateBadge();switchView('agenda');fetchSessions();}
 init();
   if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js');
