@@ -299,9 +299,17 @@ body{font-family:'DM Sans',sans-serif;background:var(--s100);color:var(--tp);min
 
 <script>
 
-const supabase = window.supabaseClient || window.supabase.createClient('https://ezkfnbrlqnruymhhfeei.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV6a2ZuYnJscW5ydXltaGhmZWVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMjg1MzAsImV4cCI6MjA5MDgwNDUzMH0.llrWSk5Kz-UvTPWY5fpeO7QD-aFaobcvAP9FxH8PhB4');
-window.supabaseClient = supabase;
+// 🔒 SUPABASE SAFE INIT (NUNCA DUPLICA)
+let supabase;
+
+if (!window.supabaseClient) {
+  supabase = window.supabase.createClient(
+  'https://ezkfnbrlqnruymhhfeei.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV6a2ZuYnJscW5ydXltaGhmZWVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMjg1MzAsImV4cCI6MjA5MDgwNDUzMH0.llrWSk5Kz-UvTPWY5fpeO7QD-aFaobcvAP9FxH8PhB4'  );
+  window.supabaseClient = supabase;
+} else {
+  supabase = window.supabaseClient;
+}
 
 // ===== NORMALIZAÇÃO + CACHE PACIENTES =====
 function normalizarNome(nome){
@@ -1208,7 +1216,9 @@ async function init(){
   updateBadge();
   switchView('agenda');
 try {
-  await carregarPacientesCache();
+  carregarPacientesCache().catch(e=>{
+  console.warn('Erro cache:', e);
+});
 } catch(e){
   console.warn('Erro ao carregar pacientes:', e);
 };
