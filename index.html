@@ -701,6 +701,8 @@ function togEvo(btn,row){btn.classList.toggle('open');document.getElementById('e
 */
 async function saveSession(row){
   const sess=sessions.find(s=>s.row===row);
+
+
   if(!sess){showToast('Sessão não encontrada');return;}
 
   const presenca=draftP[row]||sess.presenca;
@@ -764,33 +766,20 @@ const resp = await res.json();
 if (resp.status === "ok") {
   lockCard(row,presenca,evolucao);
   showToast('✅ Sessão salva com sucesso!');
-} else {
-  throw new Error(resp.error || "Erro desconhecido");
-}
 
-  }catch(e){
-    if(sv){
-      sv.classList.remove('sving');
-      sv.innerHTML='<span>💾</span> Salvar sessão';
-    }
-    showToast('Erro ao salvar: '+e.message);
-  }
-
-// ===== INTEGRAÇÃO COM SUPABASE (HISTORICO) =====
+  // ===== SUPABASE HISTORICO (CORRETO) =====
 try {
 
-  const card = btn.closest('.pc');
+  const nomePaciente = sess.patient;
+  const texto = evolucao;
+  const hora = fmtT(sess.tStart);
 
-  const nomePaciente = card.querySelector('.pname')?.innerText.trim();
-  const texto = card.querySelector('.evoinput')?.value.trim();
-  const hora = card.querySelector('.ts2')?.innerText.trim();
+  const dataHoje = new Date(sess.date);
+  const dataISO = sess.date;
 
-  const dataHoje = new Date();
-  const dataISO = dataHoje.toISOString().split('T')[0];
+  const profissional = cfg.therapist || '';
 
-  const profissional = document.getElementById('thBadge')?.innerText || '';
-
-  // 🔎 1. Buscar ID do paciente pelo nome
+  // 🔎 Buscar paciente
   const { data: pacienteData, error: erroPaciente } = await supabase
     .from('pacientes')
     .select('id')
@@ -805,33 +794,33 @@ try {
 
   const pac_id = pacienteData.id;
 
-  // 🧠 Montar semana (igual seu padrão)
+  // 📅 Semana
   const mesNome = dataHoje.toLocaleString('pt-BR', { month: 'long' });
   const semana = `${mesNome.charAt(0).toUpperCase() + mesNome.slice(1)} Semana ${Math.ceil(dataHoje.getDate() / 7)}`;
 
-  // 🧾 Montar título
+  // 🧾 Título
   const dataBR = dataHoje.toLocaleDateString('pt-BR');
   const titulo = `✓ Sessão — ${dataBR} · ${hora} · ${semana}`;
 
-  // 🧾 Montar conteúdo (igual seu banco)
+  // 🧾 Conteúdo
   const conteudo = {
     texto: texto,
     semana: semana,
-    duracao: "60",
+    duracao: sess.dur || "60",
     horaFim: hora,
     horaIni: hora,
-    convenio: "",
-    presenca: "Presente"
+    convenio: sess.conv || "",
+    presenca: presenca
   };
 
-  // 💾 2. Inserir no historico
+  // 💾 Insert
   const { error: erroInsert } = await supabase
     .from('historico')
     .insert([{
-      pac_id: pac_id,
+      pac_id,
       tipo: "evolucao",
-      titulo: titulo,
-      conteudo: conteudo,
+      titulo,
+      conteudo,
       prof_id: null,
       data: dataISO,
       status: null,
@@ -839,16 +828,27 @@ try {
     }]);
 
   if (erroInsert) {
-    console.error('Erro ao salvar historico:', erroInsert);
+    console.error('Erro historico:', erroInsert);
   } else {
-    console.log('✔ Histórico salvo com sucesso');
+    console.log('✔ Histórico salvo');
   }
 
 } catch (err) {
-  console.error('Erro geral:', err);
+  console.error('Erro geral supabase:', err);
 }
 
+  
+} else {
+  throw new Error(resp.error || "Erro desconhecido");
+}
 
+  }catch(e){
+    if(sv){
+      sv.classList.remove('sving');
+      sv.innerHTML='<span>💾</span> Salvar sessão';
+    }
+    showToast('Erro ao salvar: '+e.message);
+  }
 }
 
 function lockCard(row,presenca,evolucao){
