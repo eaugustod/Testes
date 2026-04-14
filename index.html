@@ -899,8 +899,17 @@ async function salvarHistoricoSupabase(sess, presenca, evolucao){
       body: JSON.stringify({
         pac_id: pacienteId,
         tipo: 'evolucao',
-        titulo: 'Sessão - ${sess.date} - ${sess.tStart} - ${sess.semana}',
+        titulo: titulo: `Sessão - ${sess.date} - ${sess.tStart} - ${sess.semana}`,
         conteudo: evolucao,
+          conteudo: {
+                      texto: evolucao,
+                      semana: sess.semana,
+                      duracao: sess.dur,
+                      horaFim: sess.tEnd,
+                      horaIni: sess.tStart,
+                      convenio: sess.conv,
+                      presenca: presenca
+                    },  
         prof_id: profissionalId,
         data: sess.date,
         fonte: 'agenda app'
