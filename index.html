@@ -298,10 +298,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--s100);color:var(--tp);min
 
 
 <script>
-const supabase = window.supabase.createClient(
-  'https://ezkfnbrlqnruymhhfeei.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV6a2ZuYnJscW5ydXltaGhmZWVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMjg1MzAsImV4cCI6MjA5MDgwNDUzMH0.llrWSk5Kz-UvTPWY5fpeO7QD-aFaobcvAP9FxH8PhB4'
-);
+
+const supabase = window.supabaseClient || window.supabase.createClient('https://ezkfnbrlqnruymhhfeei.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV6a2ZuYnJscW5ydXltaGhmZWVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMjg1MzAsImV4cCI6MjA5MDgwNDUzMH0.llrWSk5Kz-UvTPWY5fpeO7QD-aFaobcvAP9FxH8PhB4');
+window.supabaseClient = supabase;
 
 // ===== NORMALIZAÇÃO + CACHE PACIENTES =====
 function normalizarNome(nome){
@@ -1201,8 +1201,17 @@ function showToast(msg,dur=2800){
 function updateBadge(){document.getElementById('thBadge').textContent=cfg.therapist||'Terapeuta';}
 
 // ── INIT ──────────────────────────────────────────────────────────
-async function init(){loadCfg();buildWeek();buildYears();updateBadge();switchView('agenda');
-await carregarPacientesCache(); // 🔥 IMPORTANTE
+async function init(){
+  loadCfg();
+  buildWeek();
+  buildYears();
+  updateBadge();
+  switchView('agenda');
+try {
+  await carregarPacientesCache();
+} catch(e){
+  console.warn('Erro ao carregar pacientes:', e);
+};
 fetchSessions();}
 init();
   if ('serviceWorker' in navigator) {
