@@ -660,8 +660,8 @@ function draftEvo(row,val){draftE[row]=val;const s=sessions.find(x=>x.row===row)
 function togEvo(btn,row){btn.classList.toggle('open');document.getElementById('ev-'+row).classList.toggle('open');}
 
 async function buscarPacienteId(nome){
-  const SUPABASE_URL = "https://SEU-PROJETO.supabase.co";
-  const SUPABASE_KEY = "SUA-ANON-KEY";
+   const SUPABASE_URL = "https://ezkfnbrlqnruymhhfeei.supabase.co";
+   const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV6a2ZuYnJscW5ydXltaGhmZWVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMjg1MzAsImV4cCI6MjA5MDgwNDUzMH0.llrWSk5Kz-UvTPWY5fpeO7QD-aFaobcvAP9FxH8PhB4";
 
   const nomeNorm = normalizarTexto(nome);
 
@@ -692,8 +692,9 @@ async function buscarPacienteId(nome){
 
 
 async function buscarProfissionalId(nome){
-  const SUPABASE_URL = "https://SEU-PROJETO.supabase.co";
-  const SUPABASE_KEY = "SUA-ANON-KEY";
+  const SUPABASE_URL = "https://ezkfnbrlqnruymhhfeei.supabase.co";
+  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV6a2ZuYnJscW5ydXltaGhmZWVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMjg1MzAsImV4cCI6MjA5MDgwNDUzMH0.llrWSk5Kz-UvTPWY5fpeO7QD-aFaobcvAP9FxH8PhB4";
+
 
   if(!nome){
     console.warn("⚠️ Nome do terapeuta vazio");
