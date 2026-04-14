@@ -898,12 +898,15 @@ async function salvarHistoricoSupabase(sess, presenca, evolucao){
       },
       body: JSON.stringify({
         paciente_id: pacienteId,
+        tipo: 'evolucao',
+        titulo: 'Sessão - '+sess.date+' - '+sess.tStart+' - '+sess.semana,
         profissional_id: profissionalId,
         data: sess.date,
         hora_inicio: sess.tStart,
         hora_fim: sess.tEnd,
         presenca: presenca,
-        evolucao: evolucao
+        conteudo: evolucao,
+        fonte: 'agenda app'
       })
     });
 
