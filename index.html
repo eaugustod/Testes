@@ -903,8 +903,7 @@ async function salvarHistoricoSupabase(sess, presenca, evolucao){
         hora_inicio: sess.tStart,
         hora_fim: sess.tEnd,
         presenca: presenca,
-        evolucao: evolucao,
-        criado_em: new Date().toISOString()
+        evolucao: evolucao
       })
     });
 
