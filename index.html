@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -295,7 +296,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--s100);color:var(--tp);min
 
 <div class="toast" id="toast"></div>
 
+
 <script>
+const supabase = window.supabase.createClient(
+  'https://ezkfnbrlqnruymhhfeei.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV6a2ZuYnJscW5ydXltaGhmZWVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMjg1MzAsImV4cCI6MjA5MDgwNDUzMH0.llrWSk5Kz-UvTPWY5fpeO7QD-aFaobcvAP9FxH8PhB4'
+);
+
 // ── CONFIG ────────────────────────────────────────────────────────
 let cfg={sheetId:'',apiKey:'',sessSheet:'Sessões',regSheet:'Registros',therapist:''};
 function loadCfg(){try{const s=localStorage.getItem('ac3');if(s)cfg={...cfg,...JSON.parse(s)};}catch(e){}}
@@ -768,6 +775,80 @@ if (resp.status === "ok") {
     }
     showToast('Erro ao salvar: '+e.message);
   }
+
+// ===== INTEGRAÇÃO COM SUPABASE (HISTORICO) =====
+try {
+
+  const card = btn.closest('.pc');
+
+  const nomePaciente = card.querySelector('.pname')?.innerText.trim();
+  const texto = card.querySelector('.evoinput')?.value.trim();
+  const hora = card.querySelector('.ts2')?.innerText.trim();
+
+  const dataHoje = new Date();
+  const dataISO = dataHoje.toISOString().split('T')[0];
+
+  const profissional = document.getElementById('thBadge')?.innerText || '';
+
+  // 🔎 1. Buscar ID do paciente pelo nome
+  const { data: pacienteData, error: erroPaciente } = await supabase
+    .from('pacientes')
+    .select('id')
+    .ilike('nome', nomePaciente)
+    .limit(1)
+    .single();
+
+  if (erroPaciente || !pacienteData) {
+    console.error('Paciente não encontrado:', nomePaciente);
+    return;
+  }
+
+  const pac_id = pacienteData.id;
+
+  // 🧠 Montar semana (igual seu padrão)
+  const mesNome = dataHoje.toLocaleString('pt-BR', { month: 'long' });
+  const semana = `${mesNome.charAt(0).toUpperCase() + mesNome.slice(1)} Semana ${Math.ceil(dataHoje.getDate() / 7)}`;
+
+  // 🧾 Montar título
+  const dataBR = dataHoje.toLocaleDateString('pt-BR');
+  const titulo = `✓ Sessão — ${dataBR} · ${hora} · ${semana}`;
+
+  // 🧾 Montar conteúdo (igual seu banco)
+  const conteudo = {
+    texto: texto,
+    semana: semana,
+    duracao: "60",
+    horaFim: hora,
+    horaIni: hora,
+    convenio: "",
+    presenca: "Presente"
+  };
+
+  // 💾 2. Inserir no historico
+  const { error: erroInsert } = await supabase
+    .from('historico')
+    .insert([{
+      pac_id: pac_id,
+      tipo: "evolucao",
+      titulo: titulo,
+      conteudo: conteudo,
+      prof_id: null,
+      data: dataISO,
+      status: null,
+      fonte: "Agenda"
+    }]);
+
+  if (erroInsert) {
+    console.error('Erro ao salvar historico:', erroInsert);
+  } else {
+    console.log('✔ Histórico salvo com sucesso');
+  }
+
+} catch (err) {
+  console.error('Erro geral:', err);
+}
+
+
 }
 
 function lockCard(row,presenca,evolucao){
