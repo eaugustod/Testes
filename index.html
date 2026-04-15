@@ -696,7 +696,7 @@ async function buscarProfissionalId(nome){
   const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV6a2ZuYnJscW5ydXltaGhmZWVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMjg1MzAsImV4cCI6MjA5MDgwNDUzMH0.llrWSk5Kz-UvTPWY5fpeO7QD-aFaobcvAP9FxH8PhB4";
 
 
-   if(!nome){
+  if(!nome){
     console.warn("⚠️ Nome do terapeuta vazio");
     return null;
   }
@@ -728,7 +728,7 @@ async function buscarProfissionalId(nome){
   if(encontrado) return encontrado.id;
 
   console.warn("⚠️ NÃO ENCONTRADO:", nome);
-  return null;
+  return null; // 👈 não quebra mais
 }
 
 // ── SAVE SESSION ──────────────────────────────────────────────────
@@ -909,7 +909,7 @@ async function salvarHistoricoSupabase(sess, presenca, evolucao){
                       convenio: sess.conv,
                       presenca: presenca
                     },  
-        prof_id: profissionalId,
+        prof_id: profissionalId || null,
         data: sess.date,
         fonte: 'agenda app'
       })
