@@ -463,7 +463,12 @@ function limparEvolucao(){
 // ── DATE HELPERS ──────────────────────────────────────────────────
 const DN=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 const MN=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-function iso(d){return d.toISOString().split('T')[0];}
+function iso(d){
+  const ano = d.getFullYear();
+  const mes = String(d.getMonth()+1).padStart(2,'0');
+  const dia = String(d.getDate()).padStart(2,'0');
+  return `${ano}-${mes}-${dia}`;
+}
 function pDate(raw){
   const s=String(raw||'');
   if(s.includes('-'))return s.split('T')[0].split(' ')[0];
