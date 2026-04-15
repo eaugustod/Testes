@@ -703,7 +703,7 @@ async function buscarProfissionalId(nome){
 
   const nomeNorm = normalizarTexto(nome);
 
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/profissionais?select=id,nome_agenda`, {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/profissionais?select=id,nome`, {
     headers: {
       "apikey": SUPABASE_KEY,
       "Authorization": `Bearer ${SUPABASE_KEY}`
@@ -716,13 +716,13 @@ async function buscarProfissionalId(nome){
   console.log("📋 Profissionais:", data);
 
   let encontrado = data.find(p => 
-    normalizarTexto(p.nome_agenda) === nomeNorm
+    normalizarTexto(p.nome) === nomeNorm
   );
 
   if(encontrado) return encontrado.id;
 
   encontrado = data.find(p => 
-    normalizarTexto(p.nome_agenda).includes(nomeNorm)
+    normalizarTexto(p.nome).includes(nomeNorm)
   );
 
   if(encontrado) return encontrado.id;
