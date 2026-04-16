@@ -1016,8 +1016,6 @@ function renderResumo(regs,mes,ano,mesNome){
   fil.forEach(r=>{
     if(!map[r.patient])map[r.patient]={patient:r.patient,conv:r.conv,p:0,f:0,j:0};
     const pk=(r.presenca||'').toLowerCase();
-    const pk=(r.presenca||'').toLowerCase();
-
 if(pk==='presente'){
   map[r.patient].p++;
   const dur = String(r.dur).trim();
