@@ -1047,6 +1047,16 @@ if(pk==='presente'){
     <div class="rchead">
       <div class="rctitle">${mesNome} ${ano}</div>
       <div class="rcsub">${cfg.therapist||'Terapeuta'} · ${fil.length} registro${fil.length!==1?'s':''} · ${rows.length} paciente${rows.length!==1?'s':''}</div>
+      <div style="margin-top:10px;">
+      <button onclick="gerarPDF()" style="
+      padding:10px 14px;
+      border:none;
+      border-radius:10px;
+      background:var(--g500);
+      color:#fff;
+      font-size:13px;
+      cursor:pointer;
+      ">📄 Gerar PDF</button></div>
     </div>
     <table class="rtbl">
       <thead><tr>
@@ -1065,7 +1075,70 @@ if(pk==='presente'){
   </div>`;
 }
 
+// ----- IMPRESSÃO EM PDF DO RESUMO ----------------
+  function gerarPDF(){
+  const conteudo = document.getElementById('resumoCont').innerHTML;
 
+  const win = window.open('', '', 'width=900,height=700');
+
+  win.document.write(`
+    <html>
+      <head>
+        <title>Resumo Mensal</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            color: #000;
+          }
+
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+          }
+
+          th, td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: center;
+          }
+
+          th:first-child, td:first-child {
+            text-align: left;
+          }
+
+          .rctitle {
+            font-size: 20px;
+            font-weight: bold;
+          }
+
+          .rcsub {
+            font-size: 12px;
+            margin-bottom: 10px;
+          }
+
+          .pbar, .pfill {
+            display: none;
+          }
+
+          button {
+            display: none;
+          }
+        </style>
+      </head>
+      <body>
+        ${conteudo}
+      </body>
+    </html>
+  `);
+
+  win.document.close();
+
+  setTimeout(() => {
+    win.print();
+  }, 500);
+}
 // ── LISTAR PACIENTES (DROPDOWN) ─────────────────────────────────────────────────────
 function preencherPacientes(){
   const sel = document.getElementById('selPaciente');
