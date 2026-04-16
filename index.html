@@ -284,6 +284,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--s100);color:var(--tp);min
     <div class="cfield"><div class="clbl">Aba de sessões</div><input class="cinput" id="cSess" value="Sessões"></div>
     <div class="cfield"><div class="clbl">Aba de registros</div><input class="cinput" id="cReg" value="Registros"></div>
     <div class="cfield"><div class="clbl">Nome do terapeuta</div><input class="cinput" id="cTher" placeholder="Ex: Maria Cecilia"></div>
+    <div class="cfield">
+    <div class="clbl">Vlr 30 min (R$)</div><input class="cinput" id="cVlr30" placeholder="Ex: 80"></div>
+    <div class="cfield"><div class="clbl">Vlr 60 min (R$)</div><input class="cinput" id="cVlr60" placeholder="Ex: 120"></div>
     <button class="cbtn" onclick="saveCfg()">Salvar e Carregar</button>
     <div class="chint">
       📌 <strong>ID da planilha</strong>: trecho entre <code>/d/</code> e <code>/edit</code> na URL do Sheets.<br><br>
@@ -297,7 +300,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--s100);color:var(--tp);min
 
 <script>
 // ── CONFIG ────────────────────────────────────────────────────────
-let cfg={sheetId:'',apiKey:'',sessSheet:'Sessões',regSheet:'Registros',therapist:''};
+let cfg={sheetId:'',apiKey:'',sessSheet:'Sessões',regSheet:'Registros',therapist:'',vlr30:0,vlr60:0};
 function loadCfg(){try{const s=localStorage.getItem('ac3');if(s)cfg={...cfg,...JSON.parse(s)};}catch(e){}}
 function saveCfg(){
   cfg.sheetId=document.getElementById('cId').value.trim();
@@ -305,6 +308,8 @@ function saveCfg(){
   cfg.sessSheet=document.getElementById('cSess').value.trim()||'Sessões';
   cfg.regSheet=document.getElementById('cReg').value.trim()||'Registros';
   cfg.therapist=document.getElementById('cTher').value.trim();
+  cfg.vlr30=parseFloat(document.getElementById('cVlr30').value) || 0;
+  cfg.vlr60=parseFloat(document.getElementById('cVlr60').value) || 0;
   localStorage.setItem('ac3',JSON.stringify(cfg));
   closeCfg();updateBadge();fetchSessions();
 }
@@ -314,6 +319,8 @@ function openCfg(){
   document.getElementById('cSess').value=cfg.sessSheet;
   document.getElementById('cReg').value=cfg.regSheet;
   document.getElementById('cTher').value=cfg.therapist;
+  document.getElementById('cVlr30').value=cfg.vlr30 || '';
+  document.getElementById('cVlr60').value=cfg.vlr60 || '';
   document.getElementById('cov').classList.add('open');
 }
 function closeCfg(){document.getElementById('cov').classList.remove('open');}
@@ -987,9 +994,13 @@ async function loadResumo(){
     //            H=Semana I=Presença J=Evolução K=Mês L=Ano M=Registrado
     const rows=await sGet(`${cfg.regSheet}!A2:M2000`);
     const regs=rows.filter(r=>r[5]).map(r=>({
-      patient:r[5]||'',conv:r[6]||'',presenca:r[8]||'',
-      mes:+r[10]||0,ano:+r[11]||0
-    }));
+  patient:r[5]||'',
+  conv:r[6]||'',
+  presenca:r[8]||'',
+  dur: r[4] || '',
+  mes:+r[10]||0,
+  ano:+r[11]||0
+}));
     renderResumo(regs,mes,ano,mesNome);
   }catch(e){cont.innerHTML=`<div class="empty"><div class="empty-ico">❌</div><div class="empty-t">Erro ao carregar</div><div class="empty-s">${e.message}</div></div>`;}
   setLoad(false);
@@ -1001,10 +1012,17 @@ function renderResumo(regs,mes,ano,mesNome){
   if(fil.length===0){cont.innerHTML=`<div class="empty"><div class="empty-ico">📭</div><div class="empty-t">Nenhum registro em ${mesNome}/${ano}</div><div class="empty-s">Registros aparecem após salvar sessões.</div></div>`;return;}
 
   const map={};
+  let totalValor = 0;
   fil.forEach(r=>{
     if(!map[r.patient])map[r.patient]={patient:r.patient,conv:r.conv,p:0,f:0,j:0};
     const pk=(r.presenca||'').toLowerCase();
-    if(pk==='presente')map[r.patient].p++;
+    const pk=(r.presenca||'').toLowerCase();
+
+if(pk==='presente'){
+  map[r.patient].p++;
+  const dur = String(r.dur).trim();
+  if(dur === '30'){totalValor += cfg.vlr30;
+  } else if(dur === '60'){totalValor += cfg.vlr60;}}
     else if(pk==='falta')map[r.patient].f++;
     else if(pk.includes('justif'))map[r.patient].j++;
   });
@@ -1041,7 +1059,7 @@ function renderResumo(regs,mes,ano,mesNome){
         ${trs}
         <tr class="totrow">
           <td>TOTAL GERAL</td>
-          <td class="tdp">${tP}</td><td class="tdf">${tF}</td><td class="tdj">${tJ}</td>
+          <td class="tdp">${tP}<br><span style="font-size:11px;color:var(--g700);font-weight:600">R$ ${totalValor.toFixed(2)}</span></td><td class="tdf">${tF}</td><td class="tdj">${tJ}</td>
           <td class="tdt">${tG}<span class="pbar"><span class="pfill" style="width:${totPct}%"></span></span></td>
         </tr>
       </tbody>
