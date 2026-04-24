@@ -1141,51 +1141,69 @@ async function loadResumo(){
   cont.innerHTML=`<div class="empty"><div class="empty-ico">⏳</div><div class="empty-t">Carregando...</div></div>`;
 
   if(demoMode){renderResumo(getDemoReg(),mes,ano,mesNome);return;}
-  if(!cfg.supaUrl||!cfg.supaKey){cont.innerHTML=`<div class="empty"><div class="empty-ico">⚙️</div><div class="empty-t">Configure o Supabase</div><div class="empty-s">Toque em ⚙️ primeiro</div></div>`;return;}
+  if(!cfg.supaUrl||!cfg.supaKey){cont.innerHTML=`<div class="empty"><div class="empty-ico">⚙️</div><div class="empty-t">Configure o Supabase</div></div>`;return;}
 
   setLoad(true);
   try{
-    // Usa prof_id já resolvido e salvo no cfg — sem chamada extra ao banco
     const profFiltro = cfg.profId || null;
-
     const mesStr = String(mes).padStart(2,'0');
     const iniISO = `${ano}-${mesStr}-01`;
     const fimISO = `${ano}-${mesStr}-31`;
 
-    let params = `select=*&tipo=eq.evolucao&data=gte.${iniISO}&data=lte.${fimISO}&order=data.asc&limit=5000`;
+    // Busca direto da tabela agendamentos — fonte primária de dados
+    let params = `select=*&data_iso=gte.${iniISO}&data_iso=lte.${fimISO}&order=data_iso.asc&limit=5000`;
     if(profFiltro) params += `&prof_id=eq.${profFiltro}`;
 
-    const hist = await sbGet('historico', params);
+    const ags = await sbGet('agendamentos', params);
+    console.log(`loadResumo: ${ags.length} agendamentos encontrados para ${mesStr}/${ano}`);
 
-    const regs = hist.map(h=>{
-      const c = h.conteudo || {};
-      // Extrai nome do paciente do título: "✓ Sessão — DD/MM/AAAA · HH:MM"
-      const nomePaciente = (h.titulo||'')
-        .replace('✓ Sessão —','')
-        .split('·')[0]
-        .trim()
-        // Remove a data BR que vem logo depois do "—"
-        .replace(/^\d{2}\/\d{2}\/\d{4}\s*/, '')
-        .trim();
+    // Busca histórico do mesmo período para pegar evolução/presença real
+    let hParams = `select=pac_id,data,conteudo,appt_id&tipo=eq.evolucao&data=gte.${iniISO}&data=lte.${fimISO}&limit=5000`;
+    if(profFiltro) hParams += `&prof_id=eq.${profFiltro}`;
+    let histMap = {};
+    try{
+      const hist = await sbGet('historico', hParams);
+      hist.forEach(h=>{
+        // Indexa por appt_id ou por data+pac_id
+        if(h.appt_id) histMap[h.appt_id] = h;
+      });
+    }catch(e){ console.warn('historico não carregado no resumo:', e.message); }
+
+    const regs = ags.map(r=>{
+      const st = (r.status||'').toLowerCase();
+      // Determina presença: prioriza historico, fallback no status do agendamento
+      let presenca = '';
+      const h = histMap[r.id];
+      if(h){
+        const c = typeof h.conteudo==='string' ? JSON.parse(h.conteudo) : (h.conteudo||{});
+        presenca = c.presenca || '';
+      }
+      if(!presenca){
+        if(st==='atendido')                          presenca='Presente';
+        else if(st==='cancelado'||st==='desmarcado') presenca='Falta';
+      }
       return {
-        patient:  nomePaciente || '—',
-        conv:     c.convenio || '',
-        presenca: c.presenca || '',
-        dur:      c.duracao  || '',
-        mes,
-        ano
+        patient:  r.paciente || '—',
+        conv:     r.plano    || '',
+        presenca: presenca,
+        dur:      r.dur_min  ? String(r.dur_min) : '',
+        status:   r.status   || '',
+        mes, ano
       };
-    }).filter(r=>r.patient && r.patient !== '—');
+    }).filter(r=>r.patient && r.patient!=='—');
 
     renderResumo(regs,mes,ano,mesNome);
-  }catch(e){cont.innerHTML=`<div class="empty"><div class="empty-ico">❌</div><div class="empty-t">Erro ao carregar</div><div class="empty-s">${e.message}</div></div>`;}
+  }catch(e){
+    cont.innerHTML=`<div class="empty"><div class="empty-ico">❌</div><div class="empty-t">Erro ao carregar</div><div class="empty-s">${e.message}</div></div>`;
+    console.error('loadResumo:', e);
+  }
   setLoad(false);
 }
 
 function renderResumo(regs,mes,ano,mesNome){
   const fil=regs.filter(r=>r.mes===mes&&r.ano===ano);
   const cont=document.getElementById('resumoCont');
-  if(fil.length===0){cont.innerHTML=`<div class="empty"><div class="empty-ico">📭</div><div class="empty-t">Nenhum registro em ${mesNome}/${ano}</div><div class="empty-s">Registros aparecem após salvar sessões.</div></div>`;return;}
+  if(fil.length===0){cont.innerHTML=`<div class="empty"><div class="empty-ico">📭</div><div class="empty-t">Nenhum agendamento em ${mesNome}/${ano}</div><div class="empty-s">Verifique se há agendamentos cadastrados para este período.</div></div>`;return;}
 
   const map={};
   let totalValor = 0;
@@ -1222,7 +1240,7 @@ if(pk==='presente'){
   cont.innerHTML=`<div class="rcard">
     <div class="rchead">
       <div class="rctitle">${mesNome} ${ano}</div>
-      <div class="rcsub">${cfg.therapist||'Terapeuta'} · ${fil.length} registro${fil.length!==1?'s':''} · ${rows.length} paciente${rows.length!==1?'s':''}</div>
+      <div class="rcsub">${usuario?.nome||cfg.therapist||'Terapeuta'} · ${fil.length} registro${fil.length!==1?'s':''} · ${rows.length} paciente${rows.length!==1?'s':''}</div>
       <div style="margin-top:10px;">
       <button onclick="gerarPDF()" style="
       padding:10px 14px;
