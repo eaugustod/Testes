@@ -193,11 +193,59 @@ body{font-family:'DM Sans',sans-serif;background:var(--s100);color:var(--tp);min
   .rtbl .totrow td{background:#1c1c1a}
   .demobanner{background:rgba(255,193,7,.08);border-color:rgba(255,193,7,.2);color:#c49d00}
 }
+
+/* ── LOGIN SCREEN ───────────────────────────────────────────────── */
+#loginScreen{
+  position:fixed;inset:0;z-index:9999;
+  background:var(--g900);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:32px 24px;
+  transition:opacity .4s;
+}
+#loginScreen.hide{opacity:0;pointer-events:none;}
+.lg-logo{font-family:'DM Serif Display',serif;font-size:32px;color:white;text-align:center;margin-bottom:4px;letter-spacing:-.5px;}
+.lg-logo span{color:var(--g300);font-style:italic;}
+.lg-sub{font-size:13px;color:rgba(255,255,255,.5);text-align:center;margin-bottom:40px;}
+.lg-card{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:28px 24px;width:100%;max-width:360px;backdrop-filter:blur(8px);}
+.lg-title{font-size:16px;font-weight:600;color:white;margin-bottom:20px;text-align:center;}
+.lg-field{margin-bottom:16px;}
+.lg-lbl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:rgba(255,255,255,.5);margin-bottom:6px;}
+.lg-input{width:100%;padding:14px 16px;background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.15);border-radius:12px;color:white;font-family:'DM Sans',sans-serif;font-size:15px;outline:none;transition:border-color .2s;}
+.lg-input::placeholder{color:rgba(255,255,255,.3);}
+.lg-input:focus{border-color:var(--g300);}
+.lg-btn{width:100%;padding:15px;background:var(--g500);border:none;border-radius:12px;color:white;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:background .2s;margin-top:4px;}
+.lg-btn:hover{background:var(--g700);}
+.lg-btn:disabled{background:var(--g700);opacity:.6;cursor:not-allowed;}
+.lg-err{background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.3);color:#fca5a5;border-radius:10px;padding:10px 14px;font-size:13px;margin-top:14px;display:none;line-height:1.5;}
+.lg-err.show{display:block;}
+.lg-spin{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px;}
+/* cfg-btn logout */
+.lg-out{display:flex;align-items:center;gap:8px;padding:10px 14px;background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.3);border-radius:10px;color:#fca5a5;font-size:13px;font-weight:500;cursor:pointer;width:100%;margin-top:4px;font-family:'DM Sans',sans-serif;}
+
 </style>
 </head>
 <body>
 
 <div class="lbar" id="lbar" style="width:0"></div>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen">
+  <div class="lg-logo">Agenda <span>Clínica</span></div>
+  <div class="lg-sub">Sistema de gestão clínica</div>
+  <div class="lg-card">
+    <div class="lg-title">Entrar na sua conta</div>
+    <div class="lg-field">
+      <div class="lg-lbl">E-mail</div>
+      <input class="lg-input" id="lgEmail" type="email" placeholder="seu@email.com" autocomplete="email">
+    </div>
+    <div class="lg-field">
+      <div class="lg-lbl">Senha</div>
+      <input class="lg-input" id="lgSenha" type="password" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="lg-btn" id="lgBtn" onclick="fazerLogin()">Entrar</button>
+    <div class="lg-err" id="lgErr"></div>
+  </div>
+</div>
 
 <!-- HEADER -->
 <div class="hdr">
@@ -281,9 +329,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--s100);color:var(--tp);min
     <div class="ctitle">Configuração</div>
     <div class="cfield"><div class="clbl">Supabase URL</div><input class="cinput" id="cSupaUrl" placeholder="https://xxxx.supabase.co"></div>
     <div class="cfield"><div class="clbl">Supabase Anon Key</div><input class="cinput" id="cSupaKey" placeholder="eyJ..."></div>
-    <div class="cfield"><div class="clbl">Nome do terapeuta</div><input class="cinput" id="cTher" placeholder="Ex: Maria Cecilia"></div>
     <div class="cfield"><div class="clbl">Vlr 30 min (R$)</div><input class="cinput" id="cVlr30" placeholder="Ex: 80"></div>
     <div class="cfield"><div class="clbl">Vlr 60 min (R$)</div><input class="cinput" id="cVlr60" placeholder="Ex: 120"></div>
+    <button class="lg-out" onclick="fazerLogout()">🚪 Sair da conta (<span id="cfgUserEmail" style="font-style:italic">—</span>)</button>
     <button class="cbtn" id="btnTestar" onclick="testarConexao()" style="background:var(--g700);margin-bottom:8px">🔌 Testar conexão</button>
     <button class="cbtn" onclick="saveCfg()">Salvar e Carregar</button>
     <div id="diagBox" style="display:none;margin-top:12px;padding:12px;background:#111;border-radius:8px;font-size:12px;font-family:monospace;color:#aaa;line-height:1.7;max-height:200px;overflow-y:auto;word-break:break-all"></div>
@@ -305,55 +353,32 @@ body{font-family:'DM Sans',sans-serif;background:var(--s100);color:var(--tp);min
 <script>
 // ── CONFIG ────────────────────────────────────────────────────────
 let cfg={supaUrl:'',supaKey:'',therapist:'',profId:null,vlr30:0,vlr60:0};
-function loadCfg(){try{const s=localStorage.getItem('ac3');if(s)cfg={...cfg,...JSON.parse(s)};}catch(e){}}
-async function saveCfg(){
+let usuario=null; // {id, nome, email, perfil, prof_id}
+function loadCfg(){
+  try{const s=localStorage.getItem('ac3');if(s)cfg={...cfg,...JSON.parse(s)};}catch(e){}
+  try{const u=localStorage.getItem('ac3_user');if(u)usuario={...JSON.parse(u)};}catch(e){}
+}
+function saveCfg(){
   cfg.supaUrl=document.getElementById('cSupaUrl').value.trim().replace(/\/$/,'');
   cfg.supaKey=document.getElementById('cSupaKey').value.trim();
-  cfg.therapist=document.getElementById('cTher').value.trim();
   cfg.vlr30=parseFloat(document.getElementById('cVlr30').value) || 0;
   cfg.vlr60=parseFloat(document.getElementById('cVlr60').value) || 0;
-  cfg.profId=null;
-
-  // Testa a conexão e resolve prof_id antes de fechar o painel
-  if(cfg.supaUrl && cfg.supaKey){
-    try{
-      // Verifica a conexão com uma chamada simples
-      const testR = await fetch(`${cfg.supaUrl}/rest/v1/profissionais?select=id,nome&limit=100`,{
-        headers:{'apikey':cfg.supaKey,'Authorization':'Bearer '+cfg.supaKey}
-      });
-      if(!testR.ok) throw new Error(`HTTP ${testR.status}`);
-      const profs = await testR.json();
-
-      // Resolve prof_id pelo nome
-      if(cfg.therapist){
-        const norm = t=>(t||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9 ]/g,'').trim();
-        const nT = norm(cfg.therapist);
-        const match = profs.find(p=>norm(p.nome)===nT) || profs.find(p=>norm(p.nome).includes(nT));
-        if(match){
-          cfg.profId = match.id;
-          showToast('✅ Terapeuta: ' + match.nome);
-        } else {
-          showToast('⚠️ Terapeuta não encontrado — use o botão 🔌 para diagnosticar');
-        }
-      }
-    }catch(e){
-      showToast('❌ Falha ao conectar: ' + e.message + ' — use 🔌 para diagnosticar');
-      console.error('saveCfg conexão:', e.message);
-    }
-  }
-
   localStorage.setItem('ac3',JSON.stringify(cfg));
-  closeCfg();updateBadge();fetchSessions();
+  closeCfg();
+  updateBadge();
+  // Se já há usuário logado, recarrega sessões com novas credenciais
+  if(usuario) fetchSessions();
 }
 function openCfg(){
   document.getElementById('cSupaUrl').value=cfg.supaUrl;
   document.getElementById('cSupaKey').value=cfg.supaKey;
-  document.getElementById('cTher').value=cfg.therapist;
   document.getElementById('cVlr30').value=cfg.vlr30 || '';
   document.getElementById('cVlr60').value=cfg.vlr60 || '';
-  // Mostra aviso se rodando em file://
   const fw = document.getElementById('fileWarn');
   if(fw) fw.style.display = window.location.protocol==='file:' ? 'block' : 'none';
+  // Mostra email do usuário logado
+  const em = document.getElementById('cfgUserEmail');
+  if(em) em.textContent = usuario?.email || '—';
   document.getElementById('cov').classList.add('open');
 }
 function closeCfg(){document.getElementById('cov').classList.remove('open');}
@@ -667,6 +692,7 @@ async function sbInsert(table, body){
 // ── FETCH SESSIONS ────────────────────────────────────────────────
 async function fetchSessions(){
   if(!cfg.supaUrl||!cfg.supaKey){demoMode=true;loadDemo();renderAll();setTimeout(()=>showToast('🔧 Modo demonstração — configure em ⚙️'),800);return;}
+  if(!usuario){showToast('⚠️ Faça login para carregar a agenda.');return;}
   demoMode=false;setLoad(true);
   try{
     // Usa prof_id já resolvido e salvo no cfg — sem chamada extra ao banco
@@ -714,35 +740,61 @@ async function fetchSessions(){
   setLoad(false);
 }
 
-// Enriquece sessions com dados do historico (evolucao + presenca real)
-// Filtra pelo prof_id quando disponível para não cruzar dados de outros terapeutas
+// Enriquece sessions com dados do historico
+// Casa por appt_id (mais confiável) ou por pac_id+data como fallback
 async function enrichFromHistorico(profId){
   try{
-    let params = 'select=*&tipo=eq.evolucao&order=data.desc&limit=10000';
+    // Busca histórico do período visível (±60 dias para cobrir a semana)
+    const datas = sessions.map(s=>s.date).filter(Boolean);
+    if(!datas.length) return;
+    const minData = datas.reduce((a,b)=>a<b?a:b);
+    const maxData = datas.reduce((a,b)=>a>b?a:b);
+
+    let params = `select=*&tipo=eq.evolucao&data=gte.${minData}&data=lte.${maxData}&order=data.desc&limit=5000`;
     if(profId) params += `&prof_id=eq.${profId}`;
 
     const hist = await sbGet('historico', params);
+
+    // Monta mapa de pac_id → nome para enriquecer o casamento
+    // Primeiro tenta casar por appt_id (campo appt_id no historico = id do agendamento)
     hist.forEach(h=>{
-      const conteudo = h.conteudo || {};
-      // Casa por data + nome do paciente extraído do título
-      const nomeTitulo = (h.titulo||'')
-        .replace('✓ Sessão —','')
-        .split('·')[0]
-        .trim();
-      const match = sessions.find(s=>
-        s.date === h.data &&
-        normalizarTexto(s.patient) === normalizarTexto(nomeTitulo)
-      );
-      if(match){
-        if(conteudo.texto)    match.evolucao = conteudo.texto;
-        if(conteudo.presenca) match.presenca = conteudo.presenca;
-        if(conteudo.presenca){
-          const pk=(conteudo.presenca||'').toLowerCase();
-          match.locked = pk==='presente'||pk==='falta'||pk.includes('justif');
+      const conteudo = typeof h.conteudo === 'string' ? JSON.parse(h.conteudo) : (h.conteudo || {});
+
+      // Tentativa 1: casar por appt_id
+      let match = h.appt_id ? sessions.find(s => s.id === h.appt_id) : null;
+
+      // Tentativa 2: casar por pac_id + data (se a sessão tiver pac_id)
+      if(!match && h.pac_id && h.data){
+        match = sessions.find(s => s.date === h.data && s.pac_id === h.pac_id);
+      }
+
+      // Tentativa 3: casar por data + nome do paciente (campo paciente no historico)
+      if(!match && h.data){
+        const nomePac = conteudo.paciente || h.paciente || '';
+        if(nomePac){
+          match = sessions.find(s =>
+            s.date === h.data &&
+            normalizarTexto(s.patient) === normalizarTexto(nomePac)
+          );
         }
-        match.histId = h.id;
+      }
+
+      if(match){
+        if(conteudo.texto !== undefined) match.evolucao = conteudo.texto || '';
+        if(conteudo.presenca)            match.presenca = conteudo.presenca;
+        if(conteudo.presenca){
+          const pk = (conteudo.presenca||'').toLowerCase();
+          match.locked = pk==='presente' || pk==='falta' || pk.includes('justif');
+        }
+        match.histId  = h.id;
+        match.pac_id  = h.pac_id || match.pac_id;
       }
     });
+
+    // Debug: mostra no console quantos históricos casaram
+    const comEvo = sessions.filter(s=>s.histId).length;
+    console.log(`enrichFromHistorico: ${hist.length} registros do historico, ${comEvo} sessões enriquecidas`);
+
   }catch(e){
     console.warn('Histórico não carregado:', e.message);
   }
@@ -917,6 +969,8 @@ async function buscarPacienteId(nome){
 
 
 async function buscarProfissionalId(nome){
+  // Prioridade: prof_id já resolvido via login
+  if(cfg.profId) return cfg.profId;
   if(!nome){console.warn('⚠️ Nome do terapeuta vazio');return null;}
   const nomeNorm = normalizarTexto(nome);
   const data = await sbGet('profissionais','select=id,nome');
@@ -976,9 +1030,10 @@ async function salvarHistoricoSupabase(sess, presenca, evolucao){
     const profId      = await buscarProfissionalId(cfg.therapist);
 
     const payload = {
-      titulo: `✓ Sessão — ${formatarDataBR(sess.date)} · ${sess.tStart}`,
+      titulo: `✓ Sessão — ${sess.patient} · ${formatarDataBR(sess.date)} · ${sess.tStart}`,
       conteudo:{
         texto:    evolucao,
+        paciente: sess.patient||'',
         semana:   sess.semana||'',
         duracao:  sess.dur||'',
         horaFim:  sess.tEnd||'',
@@ -1246,149 +1301,68 @@ function preencherPacientes(){
 }
 
 // ── MOSTRA EVOLUCOES ─────────────────────────────────────────────────────
-function carregarEvolucoes(){
+async function carregarEvolucoes(){
   const paciente = document.getElementById('selPaciente').value;
-  const lista = document.getElementById('listaEvolucoes');
+  const lista    = document.getElementById('listaEvolucoes');
 
-  if(!paciente){
-    lista.innerHTML = '';
-    return;
-  }
+  if(!paciente){ lista.innerHTML=''; return; }
 
-  const evolucoes = sessions
-    .filter(s => 
-      s.patient === paciente && 
-      (
-        (s.evolucao && s.evolucao.trim() !== '') ||
-        (s.presenca && s.presenca !== '')
-      )
-    )
-    .sort((a,b) => b.date.localeCompare(a.date));
+  lista.innerHTML = `<div class="empty"><div class="empty-ico">⏳</div><div class="empty-t">Carregando...</div></div>`;
 
-  if(evolucoes.length === 0){
+  try{
+    // Resolve pac_id do paciente selecionado
+    const pacId = await buscarPacienteId(paciente);
+
+    // Busca todo o histórico de evolução do paciente direto do Supabase
+    let params = `select=*&tipo=eq.evolucao&pac_id=eq.${pacId}&order=data.desc&limit=500`;
+    if(cfg.profId) params += `&prof_id=eq.${cfg.profId}`;
+    const hist = await sbGet('historico', params);
+
+    if(!hist.length){
+      lista.innerHTML = `
+        <div class="empty">
+          <div class="empty-ico">📝</div>
+          <div class="empty-t">Sem registros</div>
+          <div class="empty-s">Nenhuma evolução encontrada para este paciente.</div>
+        </div>`;
+      return;
+    }
+
     lista.innerHTML = `
-      <div class="empty">
-        <div class="empty-ico">📝</div>
-        <div class="empty-t">Sem registros</div>
-        <div class="empty-s">Nenhuma evolução, falta ou justificativa encontrada.</div>
+      <div style="position:relative;padding-left:20px;">
+        <div style="position:absolute;left:6px;top:0;bottom:0;width:2px;background:var(--bdr)"></div>
+        ${hist.map(h => {
+          const c = typeof h.conteudo === 'string' ? JSON.parse(h.conteudo) : (h.conteudo||{});
+          const presenca = (c.presenca||'').toLowerCase();
+          let statusLabel='—', cor='#999';
+          if(presenca==='presente')          { statusLabel='Presente';   cor='#16a34a'; }
+          else if(presenca==='falta')         { statusLabel='Falta';      cor='#dc2626'; }
+          else if(presenca.includes('justif')){ statusLabel='Justificou'; cor='#d97706'; }
+
+          const dataFmt = (h.data||'').split('-').reverse().join('/');
+          const hora    = c.horaIni ? ` · ${c.horaIni.slice(0,5)}` : '';
+          const dur     = c.duracao ? ` · ${c.duracao} min` : '';
+          const conv    = c.convenio ? `<span style="font-size:11px;color:var(--tm);margin-left:6px">${c.convenio}</span>` : '';
+          const texto   = (c.texto||'').trim();
+
+          return `
+            <div style="position:relative;margin-bottom:18px;">
+              <div style="position:absolute;left:-14px;top:4px;width:10px;height:10px;border-radius:50%;background:${cor}"></div>
+              <div style="font-size:13px;font-weight:600;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center">
+                <span>${dataFmt}${hora}${dur}${conv}</span>
+                <span style="color:${cor};font-size:12px">${statusLabel}</span>
+              </div>
+              <div style="font-size:14px;line-height:1.6;color:var(--tp);background:var(--sur);border:1px solid var(--bdr);border-radius:10px;padding:10px;white-space:pre-wrap">
+                ${texto || '<i style="color:var(--tm)">Sem texto de evolução</i>'}
+              </div>
+            </div>`;
+        }).join('')}
       </div>`;
-    return;
+
+  }catch(e){
+    lista.innerHTML = `<div class="empty"><div class="empty-ico">❌</div><div class="empty-t">Erro ao carregar</div><div class="empty-s">${e.message}</div></div>`;
+    console.error('carregarEvolucoes:', e);
   }
-
-  /*
-  lista.innerHTML = evolucoes.map(e => {
-
-  const status = (e.presenca || '').toLowerCase();
-
-  let statusLabel = '';
-  if(status === 'presente') statusLabel = '✅ Presente';
-  else if(status === 'falta') statusLabel = '❌ Falta';
-  else if(status.includes('justif')) statusLabel = '⚠️ Justificou';
-  else statusLabel = '—';
-
-  return `
-    <div style="
-      background: var(--sur);
-      border: 1px solid var(--bdr);
-      border-radius: 12px;
-      padding: 12px;
-      margin-bottom: 10px;
-    ">
-
-      <div style="
-        font-size: 13px;
-        font-weight: 600;
-        margin-bottom: 6px;
-        display: flex;
-        justify-content: space-between;
-      ">
-        <span>${e.date.split('-').reverse().join('/')}</span>
-        <span>${statusLabel}</span>
-      </div>
-
-      <div style="
-        font-size: 14px;
-        line-height: 1.5;
-        color: var(--tp);
-      ">
-        ${e.evolucao && e.evolucao.trim() !== '' 
-          ? e.evolucao 
-          : '<i>Sem evolução registrada</i>'}
-      </div>
-
-    </div>
-  `;
-}).join('');
-*/
-
-lista.innerHTML = `
-  <div style="position:relative;padding-left:20px;">
-    <div style="
-      position:absolute;
-      left:6px;
-      top:0;
-      bottom:0;
-      width:2px;
-      background:var(--bdr);
-    "></div>
-
-    ${evolucoes.map(e => {
-
-      const status = (e.presenca || '').toLowerCase();
-
-      let statusLabel = '';
-      let cor = '#999';
-
-      if(status === 'presente'){ statusLabel = 'Presente'; cor = '#16a34a'; }
-      else if(status === 'falta'){ statusLabel = 'Falta'; cor = '#dc2626'; }
-      else if(status.includes('justif')){ statusLabel = 'Justificou'; cor = '#d97706'; }
-
-      return `
-        <div style="position:relative;margin-bottom:18px;">
-
-          <!-- PONTO -->
-          <div style="
-            position:absolute;
-            left:-14px;
-            top:4px;
-            width:10px;
-            height:10px;
-            border-radius:50%;
-            background:${cor};
-          "></div>
-
-          <!-- CABEÇALHO -->
-          <div style="
-            font-size:13px;
-            font-weight:600;
-            margin-bottom:4px;
-            display:flex;
-            justify-content:space-between;
-          ">
-            <span>${e.date.split('-').reverse().join('/')}</span>
-            <span style="color:${cor}">${statusLabel || '—'}</span>
-          </div>
-
-          <!-- TEXTO -->
-          <div style="
-            font-size:14px;
-            line-height:1.5;
-            color:var(--tp);
-            background:var(--sur);
-            border:1px solid var(--bdr);
-            border-radius:10px;
-            padding:10px;
-          ">
-            ${e.evolucao && e.evolucao.trim() !== '' 
-              ? e.evolucao 
-              : '<i>Sem evolução registrada</i>'}
-          </div>
-
-        </div>
-      `;
-    }).join('')}
-  </div>
-`;
 }
 // ── DEMO DATA ─────────────────────────────────────────────────────
 function loadDemo(){
@@ -1427,10 +1401,160 @@ function showToast(msg,dur=2800){
   const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),dur);
 }
-function updateBadge(){document.getElementById('thBadge').textContent=cfg.therapist||'Terapeuta';}
+function updateBadge(){
+  const nome = (usuario?.nome || cfg.therapist || '').split(' ')[0]; // só o primeiro nome
+  document.getElementById('thBadge').textContent = nome || '—';
+}
+
+// ── LOGIN / LOGOUT ────────────────────────────────────────────────
+async function fazerLogin(){
+  const email  = document.getElementById('lgEmail').value.trim();
+  const senha  = document.getElementById('lgSenha').value;
+  const btn    = document.getElementById('lgBtn');
+  const errBox = document.getElementById('lgErr');
+
+  errBox.classList.remove('show');
+  if(!email||!senha){mostrarErroLogin('Preencha e-mail e senha.');return;}
+  if(!cfg.supaUrl||!cfg.supaKey){mostrarErroLogin('Configure a URL e Anon Key do Supabase primeiro (⚙️).');return;}
+
+  btn.disabled=true;
+  btn.innerHTML='<span class="lg-spin"></span>Entrando...';
+
+  try{
+    // Busca usuário na tabela usuarios pelo email
+    const url = `${cfg.supaUrl}/rest/v1/usuarios?email=eq.${encodeURIComponent(email)}&select=*&limit=1`;
+    const res = await fetch(url,{headers:{'apikey':cfg.supaKey,'Authorization':'Bearer '+cfg.supaKey}});
+
+    if(!res.ok){
+      const txt = await res.text().catch(()=>'');
+      throw new Error(`Erro ao consultar banco (HTTP ${res.status}): ${txt.slice(0,100)}`);
+    }
+
+    const lista = await res.json();
+
+    if(!lista.length){
+      mostrarErroLogin('E-mail não encontrado.');
+      btn.disabled=false; btn.innerHTML='Entrar'; return;
+    }
+
+    const u = lista[0];
+
+    // Verifica status
+    if(u.status && u.status.toLowerCase()==='inativo'){
+      mostrarErroLogin('Usuário inativo. Entre em contato com o administrador.');
+      btn.disabled=false; btn.innerHTML='Entrar'; return;
+    }
+
+    // Verifica se é profissional
+    if(!u.perfil || u.perfil.toLowerCase()!=='profissional'){
+      mostrarErroLogin('Acesso restrito a profissionais cadastrados.');
+      btn.disabled=false; btn.innerHTML='Entrar'; return;
+    }
+
+    // Verifica senha — compara campo senha (texto simples) ou hash básico
+    // NOTA: para produção use Supabase Auth. Aqui usamos campo senha da tabela usuarios.
+    const senhaOk = await verificarSenha(senha, u);
+    if(!senhaOk){
+      mostrarErroLogin('Senha incorreta.');
+      btn.disabled=false; btn.innerHTML='Entrar'; return;
+    }
+
+    // Login OK — persiste usuário e prof_id
+    usuario = {id:u.id, nome:u.nome, email:u.email, perfil:u.perfil, prof_id:u.prof_id||null};
+    cfg.profId   = u.prof_id || null;
+    cfg.therapist= u.nome || '';
+    localStorage.setItem('ac3_user', JSON.stringify(usuario));
+    localStorage.setItem('ac3', JSON.stringify(cfg));
+
+    mostrarApp();
+
+  }catch(e){
+    mostrarErroLogin('Erro de conexão: ' + e.message);
+    console.error('login:', e);
+  }
+  btn.disabled=false;
+  btn.innerHTML='Entrar';
+}
+
+async function verificarSenha(senhaDigitada, u){
+  // Suporta campo 'senha' em texto simples (migração inicial)
+  // Para hash SHA-256: compare com u.senha_hash se existir
+  if(u.senha !== undefined && u.senha !== null){
+    return String(u.senha) === String(senhaDigitada);
+  }
+  // Se não houver campo senha, tenta campo password
+  if(u.password !== undefined && u.password !== null){
+    return String(u.password) === String(senhaDigitada);
+  }
+  // Fallback: se não há campo de senha na tabela, permite entrada (não recomendado)
+  console.warn('Campo senha não encontrado na tabela usuarios');
+  return true;
+}
+
+function mostrarErroLogin(msg){
+  const e = document.getElementById('lgErr');
+  e.textContent = msg;
+  e.classList.add('show');
+}
+
+function mostrarApp(){
+  // Esconde tela de login com fade
+  const ls = document.getElementById('loginScreen');
+  ls.classList.add('hide');
+  setTimeout(()=>ls.style.display='none', 400);
+
+  updateBadge();
+  buildWeek();
+  buildYears();
+  switchView('agenda');
+  fetchSessions();
+}
+
+function fazerLogout(){
+  usuario = null;
+  cfg.profId = null;
+  cfg.therapist = '';
+  localStorage.removeItem('ac3_user');
+  localStorage.setItem('ac3', JSON.stringify(cfg));
+  closeCfg();
+
+  // Volta para tela de login
+  const ls = document.getElementById('loginScreen');
+  ls.style.display = 'flex';
+  ls.style.opacity = '0';
+  ls.classList.remove('hide');
+  setTimeout(()=>ls.style.opacity='1', 10);
+  document.getElementById('lgEmail').value='';
+  document.getElementById('lgSenha').value='';
+  document.getElementById('lgErr').classList.remove('show');
+  document.getElementById('lgBtn').innerHTML='Entrar';
+}
+
+// Enter no campo senha dispara login
+document.addEventListener('DOMContentLoaded',()=>{
+  const s = document.getElementById('lgSenha');
+  if(s) s.addEventListener('keydown', e=>{ if(e.key==='Enter') fazerLogin(); });
+  const em = document.getElementById('lgEmail');
+  if(em) em.addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('lgSenha').focus(); });
+});
 
 // ── INIT ──────────────────────────────────────────────────────────
-function init(){loadCfg();buildWeek();buildYears();updateBadge();switchView('agenda');fetchSessions();}
+function init(){
+  loadCfg();
+  updateBadge();
+
+  // Se usuário já estava logado (localStorage), vai direto para o app
+  if(usuario && usuario.prof_id){
+    cfg.profId    = usuario.prof_id;
+    cfg.therapist = usuario.nome || '';
+    mostrarApp();
+  } else {
+    // Mostra tela de login
+    buildWeek();
+    buildYears();
+    // Se não há URL/Key configurados ainda, a tela de login avisa
+  }
+}
 init();
   if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js');
