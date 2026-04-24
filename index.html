@@ -1158,22 +1158,20 @@ async function loadResumo(){
     console.log(`loadResumo: ${ags.length} agendamentos encontrados para ${mesStr}/${ano}`);
 
     // Busca histórico do mesmo período para pegar evolução/presença real
-    let hParams = `select=pac_id,data,conteudo,appt_id&tipo=eq.evolucao&data=gte.${iniISO}&data=lte.${fimISO}&limit=5000`;
+    let hParams = `select=id,pac_id,data,conteudo&tipo=eq.evolucao&data=gte.${iniISO}&data=lte.${fimISO}&limit=5000`;
     if(profFiltro) hParams += `&prof_id=eq.${profFiltro}`;
     let histMap = {};
     try{
       const hist = await sbGet('historico', hParams);
-      hist.forEach(h=>{
-        // Indexa por appt_id ou por data+pac_id
-        if(h.appt_id) histMap[h.appt_id] = h;
-      });
+      // Indexa por data+paciente para cruzar com agendamentos
+      hist.forEach(h=>{ if(h.data) histMap[h.data+'_'+h.pac_id] = h; });
     }catch(e){ console.warn('historico não carregado no resumo:', e.message); }
 
     const regs = ags.map(r=>{
       const st = (r.status||'').toLowerCase();
       // Determina presença: prioriza historico, fallback no status do agendamento
       let presenca = '';
-      const h = histMap[r.id];
+      const h = histMap[r.data_iso+'_'+r.pac_id] || null;
       if(h){
         const c = typeof h.conteudo==='string' ? JSON.parse(h.conteudo) : (h.conteudo||{});
         presenca = c.presenca || '';
