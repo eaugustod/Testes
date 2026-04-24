@@ -232,7 +232,28 @@ body{font-family:'DM Sans',sans-serif;background:var(--s100);color:var(--tp);min
 <div id="loginScreen">
   <div class="lg-logo">Agenda <span>Clínica</span></div>
   <div class="lg-sub">Sistema de gestão clínica</div>
-  <div class="lg-card">
+  <div class="lg-sub">V 2.10</div>
+
+  <!-- CARD SETUP (primeiro acesso) -->
+  <div class="lg-card" id="setupCard" style="display:none;margin-bottom:16px;width:100%;max-width:360px">
+    <div class="lg-title">⚙️ Configuração inicial</div>
+    <div style="font-size:12px;color:rgba(255,255,255,.45);text-align:center;margin-bottom:18px;line-height:1.6">
+      Configure o banco de dados uma vez.<br>Os dados ficam salvos neste dispositivo.
+    </div>
+    <div class="lg-field">
+      <div class="lg-lbl">Supabase URL</div>
+      <input class="lg-input" id="setupUrl" type="url" placeholder="https://xxxx.supabase.co" autocomplete="off">
+    </div>
+    <div class="lg-field" style="margin-bottom:0">
+      <div class="lg-lbl">Anon Key</div>
+      <input class="lg-input" id="setupKey" placeholder="eyJ..." autocomplete="off">
+    </div>
+    <button class="lg-btn" id="setupBtn" style="margin-top:14px" onclick="salvarSetup()">Salvar e continuar →</button>
+    <div class="lg-err" id="setupErr"></div>
+  </div>
+
+  <!-- CARD LOGIN -->
+  <div class="lg-card" id="loginCard" style="display:none;width:100%;max-width:360px">
     <div class="lg-title">Entrar na sua conta</div>
     <div class="lg-field">
       <div class="lg-lbl">E-mail</div>
@@ -244,6 +265,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--s100);color:var(--tp);min
     </div>
     <button class="lg-btn" id="lgBtn" onclick="fazerLogin()">Entrar</button>
     <div class="lg-err" id="lgErr"></div>
+    <div style="text-align:center;margin-top:14px">
+      <button onclick="mostrarSetup()" style="background:none;border:none;color:rgba(255,255,255,.3);font-size:12px;cursor:pointer;font-family:inherit;text-decoration:underline">
+        Alterar configuração do banco
+      </button>
+    </div>
   </div>
 </div>
 
@@ -1538,21 +1564,88 @@ document.addEventListener('DOMContentLoaded',()=>{
   if(em) em.addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('lgSenha').focus(); });
 });
 
+// ── SETUP / FLUXO INICIAL ─────────────────────────────────────────
+function mostrarSetup(){
+  document.getElementById('setupCard').style.display = 'block';
+  document.getElementById('loginCard').style.display  = 'none';
+  document.getElementById('setupUrl').value = cfg.supaUrl || '';
+  document.getElementById('setupKey').value = cfg.supaKey || '';
+  document.getElementById('setupErr').classList.remove('show');
+  setTimeout(()=>document.getElementById('setupUrl').focus(), 50);
+}
+
+function mostrarLogin(){
+  document.getElementById('setupCard').style.display = 'none';
+  document.getElementById('loginCard').style.display  = 'block';
+  document.getElementById('lgErr').classList.remove('show');
+  setTimeout(()=>document.getElementById('lgEmail').focus(), 50);
+}
+
+async function salvarSetup(){
+  const url = document.getElementById('setupUrl').value.trim().replace(/\/$/,'');
+  const key = document.getElementById('setupKey').value.trim();
+  const err = document.getElementById('setupErr');
+  const btn = document.getElementById('setupBtn');
+  err.classList.remove('show');
+
+  if(!url || !url.startsWith('https://')){
+    err.textContent='URL inválida. Formato: https://xxxx.supabase.co';
+    err.classList.add('show'); return;
+  }
+  if(!key || !key.startsWith('eyJ')){
+    err.textContent='Anon Key inválida — deve começar com eyJ...';
+    err.classList.add('show'); return;
+  }
+
+  btn.disabled=true;
+  btn.innerHTML='<span class="lg-spin"></span>Testando conexão...';
+
+  try{
+    const r = await fetch(url+'/rest/v1/usuarios?select=id&limit=1',{
+      headers:{'apikey':key,'Authorization':'Bearer '+key}
+    });
+    if(!r.ok) throw new Error('HTTP '+r.status+' — verifique URL e Anon Key');
+
+    cfg.supaUrl = url;
+    cfg.supaKey = key;
+    localStorage.setItem('ac3', JSON.stringify(cfg));
+
+    btn.innerHTML='✅ Conectado!';
+    setTimeout(()=>{
+      btn.disabled=false;
+      btn.innerHTML='Salvar e continuar →';
+      mostrarLogin();
+    }, 900);
+
+  }catch(e){
+    err.textContent='Falha: '+e.message;
+    err.classList.add('show');
+    btn.disabled=false;
+    btn.innerHTML='Salvar e continuar →';
+  }
+}
+
 // ── INIT ──────────────────────────────────────────────────────────
 function init(){
   loadCfg();
+  buildWeek();
+  buildYears();
   updateBadge();
 
-  // Se usuário já estava logado (localStorage), vai direto para o app
-  if(usuario && usuario.prof_id){
+  // Sessão ativa: vai direto para o app
+  if(usuario && usuario.prof_id && cfg.supaUrl && cfg.supaKey){
     cfg.profId    = usuario.prof_id;
     cfg.therapist = usuario.nome || '';
     mostrarApp();
+    return;
+  }
+
+  // Sem Supabase configurado: mostra setup primeiro
+  if(!cfg.supaUrl || !cfg.supaKey){
+    mostrarSetup();
   } else {
-    // Mostra tela de login
-    buildWeek();
-    buildYears();
-    // Se não há URL/Key configurados ainda, a tela de login avisa
+    // Já configurado: vai direto para o login
+    mostrarLogin();
   }
 }
 init();
