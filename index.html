@@ -8,7 +8,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#0F4C3A">
-<title>Agenda Clínica v2.9</title>
+<title>Agenda Clínica v2.10</title>
 <link rel="manifest" href="manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
@@ -233,7 +233,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--s100);color:var(--tp);min
 <div id="loginScreen">
   <div class="lg-logo">Agenda <span>Clínica</span></div>
   <div class="lg-sub">Sistema de gestão clínica</div>
-  <div class="lg-sub">V 2.10</div>
+  <div class="lg-sub">Versão 2.10</div>
 
   <!-- CARD SETUP (primeiro acesso) -->
   <div class="lg-card" id="setupCard" style="display:none;margin-bottom:16px;width:100%;max-width:360px">
@@ -768,7 +768,7 @@ async function fetchSessions(){
 }
 
 // Enriquece sessions com dados do historico
-// Casa por appt_id (mais confiável) ou por pac_id+data como fallback
+// Casa por pac_id+data ou por conteudo.paciente
 async function enrichFromHistorico(profId){
   try{
     // Busca histórico do período visível (±60 dias para cobrir a semana)
@@ -782,13 +782,11 @@ async function enrichFromHistorico(profId){
 
     const hist = await sbGet('historico', params);
 
-    // Monta mapa de pac_id → nome para enriquecer o casamento
-    // Primeiro tenta casar por appt_id (campo appt_id no historico = id do agendamento)
     hist.forEach(h=>{
       const conteudo = typeof h.conteudo === 'string' ? JSON.parse(h.conteudo) : (h.conteudo || {});
 
-      // Tentativa 1: casar por appt_id
-      let match = h.appt_id ? sessions.find(s => s.id === h.appt_id) : null;
+      // Tentativa 1: casar por pac_id + data
+      let match = null;
 
       // Tentativa 2: casar por pac_id + data (se a sessão tiver pac_id)
       if(!match && h.pac_id && h.data){
@@ -1084,7 +1082,6 @@ async function salvarHistoricoSupabase(sess, presenca, evolucao){
         tipo:  'evolucao',
         data:   sess.date,
         fonte: 'agenda app',
-        appt_id: sess.id || null,
       });
     }
     console.log('✅ Histórico salvo no Supabase');
