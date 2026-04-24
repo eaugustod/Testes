@@ -1466,15 +1466,22 @@ async function fazerLogin(){
 
     const u = lista[0];
 
+    // Log do usuário encontrado para diagnóstico
+    console.log('Usuário encontrado:', {
+      email: u.email, perfil: u.perfil, status: u.status, prof_id: u.prof_id
+    });
+
     // Verifica status
     if(u.status && u.status.toLowerCase()==='inativo'){
       mostrarErroLogin('Usuário inativo. Entre em contato com o administrador.');
       btn.disabled=false; btn.innerHTML='Entrar'; return;
     }
 
-    // Verifica se é profissional
-    if(!u.perfil || u.perfil.toLowerCase()!=='profissional'){
-      mostrarErroLogin('Acesso restrito a profissionais cadastrados.');
+    // Verifica se é profissional — aceita variações do valor do campo perfil
+    const perfilValidos = ['profissional','professional','prof','admin','administrador','terapeuta'];
+    const perfilAtual   = (u.perfil||'').toLowerCase().trim();
+    if(!perfilAtual || !perfilValidos.includes(perfilAtual)){
+      mostrarErroLogin(`Acesso restrito a profissionais. Perfil encontrado: "${u.perfil||'vazio'}"`);
       btn.disabled=false; btn.innerHTML='Entrar'; return;
     }
 
