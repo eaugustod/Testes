@@ -277,7 +277,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--s100);color:var(--tp);min
 <!-- HEADER -->
 <div class="hdr">
   <div class="htop">
-    <div class="atitle">Agenda <span>Clínica versão 2.10</span></div>
+    <div class="atitle">Agenda <span>Clínica v2.10</span></div>
     <div class="badge" id="thBadge">—</div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
@@ -726,7 +726,7 @@ async function fetchSessions(){
     const profFiltro = cfg.profId || null;
 
     // Monta query filtrando por prof_id quando disponível
-    let params = 'select=*&order=data_iso.asc,hora.asc&limit=5000';
+    let params = 'select=id,data_iso,hora,hora_fim,dur_min,paciente,plano,status,prof_id,pac_id&order=data_iso.asc,hora.asc&limit=5000';
     if(profFiltro) params += `&prof_id=eq.${profFiltro}`;
 
     const rows = await sbGet('agendamentos', params);
@@ -740,6 +740,8 @@ async function fetchSessions(){
       else if(st==='cancelado'||st==='desmarcado')  presenca='Falta';
       else if(st==='confirmado'||st==='agendado')   presenca='';
 
+      // obs no agendamento = "tipo · processo · semana" (campo interno do index_sis)
+      // NÃO é evolução — evolução vem do historico
       sessions.push({
         row:      r.id,
         id:       r.id,
@@ -753,10 +755,11 @@ async function fetchSessions(){
         proc:     '',
         semana:   '',
         presenca: presenca,
-        evolucao: r.obs||'',
+        evolucao: '',          // será preenchido pelo enrichFromHistorico
         status:   r.status||'agendado',
         locked:   ['atendido','cancelado','desmarcado'].includes(st),
         profId:   r.prof_id||null,
+        pac_id:   r.pac_id||null,  // carrega pac_id se existir na tabela
       });
     });
 
@@ -783,36 +786,37 @@ async function enrichFromHistorico(profId){
     const hist = await sbGet('historico', params);
 
     hist.forEach(h=>{
-      const conteudo = typeof h.conteudo === 'string' ? JSON.parse(h.conteudo) : (h.conteudo || {});
+      let conteudo = {};
+      try{ conteudo = typeof h.conteudo==='string' ? JSON.parse(h.conteudo) : (h.conteudo||{}); }
+      catch(e){ conteudo={}; }
 
-      // Tentativa 1: casar por pac_id + data
       let match = null;
 
-      // Tentativa 2: casar por pac_id + data (se a sessão tiver pac_id)
-      if(!match && h.pac_id && h.data){
-        match = sessions.find(s => s.date === h.data && s.pac_id === h.pac_id);
-      }
+      // Tentativa 1: casar por pac_id + data
+      if(!match && h.pac_id && h.data)
+        match = sessions.find(s => s.date===h.data && s.pac_id && s.pac_id===h.pac_id);
 
-      // Tentativa 3: casar por data + nome do paciente (campo paciente no historico)
-      if(!match && h.data){
-        const nomePac = conteudo.paciente || h.paciente || '';
-        if(nomePac){
-          match = sessions.find(s =>
-            s.date === h.data &&
-            normalizarTexto(s.patient) === normalizarTexto(nomePac)
-          );
-        }
+      // Tentativa 2: casar por data + nome dentro do conteudo
+      if(!match && h.data && conteudo.paciente)
+        match = sessions.find(s => s.date===h.data && normalizarTexto(s.patient)===normalizarTexto(conteudo.paciente));
+
+      // Tentativa 3: casar por data + nome extraído do titulo
+      // titulo = "✓ Sessão — NomePaciente · DD/MM · HH:MM"
+      if(!match && h.data && h.titulo){
+        const nomeTit = (h.titulo||'').replace('✓ Sessão —','').split('·')[0].trim();
+        if(nomeTit)
+          match = sessions.find(s => s.date===h.data && normalizarTexto(s.patient)===normalizarTexto(nomeTit));
       }
 
       if(match){
-        if(conteudo.texto !== undefined) match.evolucao = conteudo.texto || '';
-        if(conteudo.presenca)            match.presenca = conteudo.presenca;
+        match.evolucao = conteudo.texto || '';
         if(conteudo.presenca){
-          const pk = (conteudo.presenca||'').toLowerCase();
+          match.presenca = conteudo.presenca;
+          const pk = conteudo.presenca.toLowerCase();
           match.locked = pk==='presente' || pk==='falta' || pk.includes('justif');
         }
-        match.histId  = h.id;
-        match.pac_id  = h.pac_id || match.pac_id;
+        match.histId = h.id;
+        if(h.pac_id) match.pac_id = h.pac_id;
       }
     });
 
@@ -1035,7 +1039,7 @@ async function saveSession(row){
                        presenca==='Falta'     ? 'cancelado' :
                        presenca.toLowerCase().includes('justif') ? 'desmarcado' : sess.status;
 
-    await sbPatch('agendamentos', sess.id, { status: novoStatus, obs: evolucao });
+    await sbPatch('agendamentos', sess.id, { status: novoStatus });
 
     // 2. Salva/atualiza histórico
     await salvarHistoricoSupabase(sess, presenca, evolucao);
