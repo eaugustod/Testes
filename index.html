@@ -8,7 +8,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#0F4C3A">
-<title>Agenda Clínica v2.10</title>
+<title>Agenda Clínica v2.11</title>
 <link rel="manifest" href="manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
@@ -233,7 +233,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--s100);color:var(--tp);min
 <div id="loginScreen">
   <div class="lg-logo">Agenda <span>Clínica</span></div>
   <div class="lg-sub">Sistema de gestão clínica</div>
-  <div class="lg-sub">Versão 2.10</div>
+  <div class="lg-sub">Versão 2.11</div>
 
   <!-- CARD SETUP (primeiro acesso) -->
   <div class="lg-card" id="setupCard" style="display:none;margin-bottom:16px;width:100%;max-width:360px">
@@ -277,7 +277,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--s100);color:var(--tp);min
 <!-- HEADER -->
 <div class="hdr">
   <div class="htop">
-    <div class="atitle">Agenda <span>Clínica v2.10</span></div>
+    <div class="atitle">Agenda <span>Clínica v2.11</span></div>
     <div class="badge" id="thBadge">—</div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
@@ -1559,9 +1559,11 @@ function mostrarApp(){
   buildYears();
   switchView('agenda');
   fetchSessions();
+  iniciarAutoRefresh();
 }
 
 function fazerLogout(){
+  pararAutoRefresh();
   usuario = null;
   cfg.profId = null;
   cfg.therapist = '';
@@ -1677,6 +1679,36 @@ init();
   if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js');
 }
+// ── AUTO-REFRESH ──────────────────────────────────────────────────
+let _refreshTimer = null;
+const REFRESH_MS   = 15 * 60 * 1000; // 15 minutos
+
+function iniciarAutoRefresh(){
+  pararAutoRefresh();
+  _refreshTimer = setInterval(async ()=>{
+    if(!usuario || !cfg.supaUrl || !cfg.supaKey) return;
+    console.log('[Auto-refresh] Atualizando dados...', new Date().toLocaleTimeString('pt-BR'));
+    await fetchSessions();
+    showToast('🔄 Dados atualizados automaticamente', 2000);
+  }, REFRESH_MS);
+  console.log('[Auto-refresh] Iniciado — intervalo de 15 min');
+}
+
+function pararAutoRefresh(){
+  if(_refreshTimer){ clearInterval(_refreshTimer); _refreshTimer=null; }
+}
+
+// Pausa quando a aba fica em segundo plano, retoma quando volta
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden){
+    pararAutoRefresh();
+  } else if(usuario && cfg.supaUrl){
+    // Ao voltar para a aba, atualiza imediatamente e reinicia o timer
+    fetchSessions();
+    iniciarAutoRefresh();
+  }
+});
+
 function proximaSemana(){
   baseDate.setDate(baseDate.getDate() + 7);
   buildWeek();
