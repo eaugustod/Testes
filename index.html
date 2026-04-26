@@ -911,8 +911,6 @@ function buildCard(s){
   
   const st = (s.status || '').toLowerCase();
 
-  const isChegou = scls === 'c';
-  
   // 🔹 classe visual baseada no STATUS (independente)
   let scls = 'n';
 
@@ -928,6 +926,7 @@ function buildCard(s){
 
   // 🔹 classe baseada na interação (presença)
   const hasDraft = draftP[s.row] !== undefined;
+  const isChegou = scls === 'c';
 
   let effCls = 'n';
 
