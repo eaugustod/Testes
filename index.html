@@ -100,10 +100,26 @@ body{font-family:'DM Sans',sans-serif;background:var(--s100);color:var(--tp);min
 .si-n{background:var(--s200)}
 
 /* FUNDO DO CARD POR STATUS */
-.pc.bg-p { background: var(--sur); border-color: #bbf7d0; } /* verde */
-.pc.bg-f { background: var(--sur); border-color: #fecaca; } /* vermelho */
-.pc.bg-c { background: var(--sur); border-color: #fde68a; } /* amarelo */
-.pc.bg-n { background: var(--sur); } /* padrão */
+/* STATUS VISUAL PADRÃO (sem fundo) */
+.pc.bg-n { background: var(--sur); }
+
+/* ATENDIDO (verde leve) */
+.pc.bg-p {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+}
+
+/* FALTA (vermelho leve) */
+.pc.bg-f {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+/* 🔥 CHEGOU (APENAS BORDA) */
+.pc.bg-c {
+  background: var(--sur);              /* mantém fundo neutro */
+  border: 2px solid #facc15;           /* amarelo destaque */
+}
 
 /* STATUS BUTTONS */
 .srow{display:flex;gap:6px;padding:0 16px 12px}
@@ -1066,27 +1082,45 @@ function setSt(row,presenca,btn){
 
   // botão ativo
   card.querySelectorAll('.sbtn').forEach(b=>b.classList.remove('sp','sf','sj'));
-  btn.classList.add({'p':'sp','f':'sf','j':'sj'}[cls]);
+  if(btn) btn.classList.add({'p':'sp','f':'sf','j':'sj'}[cls]);
 
-  // ícone
-  card.querySelector('.si').className=`si si-${cls}`;
-  card.querySelector('.si').textContent=em;
+  // ícone (continua baseado na presença)
+  const si = card.querySelector('.si');
+  if(si){
+    si.className=`si si-${cls}`;
+    si.textContent=em;
+  }
 
-  // barra
-  card.querySelector('.csbar').className=`csbar cb-${cls}`;
+  // barra (continua baseada na presença)
+  const bar = card.querySelector('.csbar');
+  if(bar){
+    bar.className=`csbar cb-${cls}`;
+  }
 
-  // 🔥 fundo do card
-  card.classList.remove('bg-p','bg-f','bg-j','bg-n','bg-c');
-  card.classList.add('bg-'+cls);
+  // 🔥 FUNDO/BORDA BASEADO NO STATUS (não na presença)
+  const sess=sessions.find(s=>s.row===row);
+  const st=(sess?.status||'').toLowerCase();
+
+  let bg='n';
+
+  if (st === 'atendido') {
+    bg='p';
+  } else if (st === 'cancelado' || st === 'desmarcado') {
+    bg='f';
+  } else if (st === 'chegou') {
+    bg='c'; // 🔥 mantém borda amarela
+  }
+
+  card.classList.remove('bg-p','bg-f','bg-n','bg-c');
+  card.classList.add('bg-'+bg);
 
   // abrir evolução automaticamente
   const ea=card.querySelector('.evoarea'),eb=card.querySelector('.expbtn');
-  if(ea&&!ea.classList.contains('open')){
+  if(ea && !ea.classList.contains('open')){
     ea.classList.add('open');
-    eb.classList.add('open');
+    if(eb) eb.classList.add('open');
   }
 
-  const sess=sessions.find(s=>s.row===row);
   if(sess) sess.presenca=presenca;
 
   updSum(sessions.filter(s=>s.date===selDate));
