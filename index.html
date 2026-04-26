@@ -129,10 +129,32 @@ body{font-family:'DM Sans',sans-serif;background:var(--s100);color:var(--tp);min
 .sbtn.sp{border-color:#16a34a;background:#f0fdf4}.sbtn.sp .lbl2{color:#16a34a}
 .sbtn.sf{border-color:#dc2626;background:#fef2f2}.sbtn.sf .lbl2{color:#dc2626}
 .sbtn.sj{border-color:#d97706;background:transparent}.sbtn.sj .lbl2{color:#d97706}
-.sbtn-info{background:#f3f4f6;border:1.5px dashed #d1d5db;cursor:default;pointer-events:none;
+
+/* BASE */
+.sbtn-info{
+  pointer-events:none;
+  border-radius:var(--rsm);
 }
 
-.sbtn-info .lbl2{color:#6b7280;
+/* 🔹 INATIVO (transparente) */
+.sbtn-info.off{
+  background:transparent;
+  border:1.5px dashed var(--bdr);
+  opacity:.5;
+}
+
+.sbtn-info.off .lbl2{
+  color:var(--tm);
+}
+
+/* 🟡 ATIVO (quando status = chegou) */
+.sbtn-info.on{
+  background:#fffbeb;
+  border:1.5px solid #facc15;
+}
+
+.sbtn-info.on .lbl2{
+  color:#b45309;
 }
 
 /* STATUS BAR */
@@ -886,9 +908,11 @@ function renderAgenda(){
 
 function buildCard(s){
   const c = document.createElement('div');
-
+  
   const st = (s.status || '').toLowerCase();
 
+  const isChegou = scls === 'c';
+  
   // 🔹 classe visual baseada no STATUS (independente)
   let scls = 'n';
 
@@ -971,8 +995,8 @@ function buildCard(s){
             <span class="lbl2">Presente</span>
           </button>
         
-          <!-- 🔒 BOTÃO INFORMATIVO (SEM AÇÃO) -->
-          <div class="sbtn sbtn-info">
+          <!-- 🪑 AGUARDANDO -->
+          <div class="sbtn sbtn-info ${isChegou ? 'on' : 'off'}">
             <span class="ico">🪑</span>
             <span class="lbl2">Aguardando</span>
           </div>
