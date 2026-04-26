@@ -743,11 +743,17 @@ async function fetchSessions(){
       let presenca='';
       const st=(r.status||'').toLowerCase();
       
-      if(st==='atendido') presenca='Presente';
-      else if(st==='cancelado' || st==='desmarcado') presenca='Falta';
-      else if(st==='chegou') presenca='Justificou'; // vamos usar como amarelo
-      else presenca='';
-      else if(st==='confirmado'||st==='agendado')   presenca='';
+      if (st === 'atendido') {
+        presenca = 'Presente';
+      } else if (st === 'cancelado' || st === 'desmarcado') {
+        presenca = 'Falta';
+      } else if (st === 'chegou') {
+        presenca = 'Justificou'; // amarelo
+      } else if (st === 'confirmado' || st === 'agendado') {
+        presenca = '';
+      } else {
+        presenca = '';
+      }
 
       // obs no agendamento = "tipo · processo · semana" (campo interno do index_sis)
       // NÃO é evolução — evolução vem do historico
