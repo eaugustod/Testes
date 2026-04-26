@@ -868,7 +868,7 @@ function buildCard(s){
 
   const st = (s.status || '').toLowerCase();
 
-  // 🔹 NOVO: classe visual independente
+  // 🔹 classe visual baseada no STATUS (independente)
   let scls = 'n';
 
   if (st === 'atendido') {
@@ -876,25 +876,49 @@ function buildCard(s){
   } else if (st === 'cancelado' || st === 'desmarcado') {
     scls = 'f';
   } else if (st === 'chegou') {
-    scls = 'c'; // ← NOVO (não usa mais o j)
+    scls = 'c';
   } else {
     scls = 'n';
   }
 
+  // 🔹 classe baseada na interação (presença)
+  const hasDraft = draftP[s.row] !== undefined;
+
+  let effCls = 'n';
+
+  if (hasDraft) {
+    const map = {
+      'Presente': 'p',
+      'Falta': 'f',
+      'Justificou': 'j'
+    };
+    effCls = map[draftP[s.row]] || 'n';
+  } else {
+    // fallback usando presenca já salva
+    const pk = (s.presenca || '').toLowerCase();
+    if (pk === 'presente') effCls = 'p';
+    else if (pk === 'falta') effCls = 'f';
+    else if (pk.includes('justif')) effCls = 'j';
+  }
+
   const em = { p:'✅', f:'❌', c:'🟡', n:'○' }[scls];
-  const hasDraft=draftP[s.row]!==undefined;
-  const effCls=hasDraft?({'Presente':'p','Falta':'f','Justificou':'j'}[draftP[s.row]]||cls):cls;
-  const effEm={'p':'✅','f':'❌','j':'⚠️','n':'○'}[effCls];
+  const effEm = { p:'✅', f:'❌', j:'⚠️', n:'○' }[effCls];
 
   c.className = 'pc bg-' + scls + (s.locked ? ' lkd' : '');
   c.dataset.row = s.row;
 
   const hasEvo = !!(draftE[s.row] !== undefined ? draftE[s.row] : s.evolucao);
 
-  c.innerHTML=`
+  c.innerHTML = `
     <div class="csbar cb-${scls}"></div>
+
     <div class="cmain">
-      <div class="tblk"><div class="ts2">${fmtT(s.tStart)}</div><div class="te">${fmtT(s.tEnd)}</div><div class="tdot"></div></div>
+      <div class="tblk">
+        <div class="ts2">${fmtT(s.tStart)}</div>
+        <div class="te">${fmtT(s.tEnd)}</div>
+        <div class="tdot"></div>
+      </div>
+
       <div class="pinfo">
         <div class="pname">${s.patient}</div>
         <div class="pmeta">
@@ -903,36 +927,57 @@ function buildCard(s){
           ${s.proc?`<span class="mt">${s.proc}</span>`:''}
         </div>
       </div>
-      <div class="si si-${scls}">${em}</div>
+
+      <div class="si si-${effCls}">${effEm}</div>
     </div>
+
     ${s.locked
-  ?`<div class="lkbadge">
-      🔒 Atendimento registrado
-      <button onclick="editarSessao(${s.row})" style="
-        margin-left:8px;
-        border:none;
-        background:#f3f4f6;
-        padding:4px 8px;
-        border-radius:6px;
-        cursor:pointer;
-        font-size:12px;
-      ">✏️ Editar</button>
-    </div>`
-      :`<div class="srow">
-          <button class="sbtn ${effCls==='p'?'sp':''}" onclick="setSt(${s.row},'Presente',this)"><span class="ico">✅</span><span class="lbl2">Presente</span></button>
-          <button class="sbtn ${effCls==='j'?'sj':''}" onclick="setSt(${s.row},'Justificou',this)"><span class="ico">⚠️</span><span class="lbl2">Justificou</span></button>
-          <button class="sbtn ${effCls==='f'?'sf':''}" onclick="setSt(${s.row},'Falta',this)"><span class="ico">❌</span><span class="lbl2">Falta</span></button>
+      ? `<div class="lkbadge">
+          🔒 Atendimento registrado
+          <button onclick="editarSessao(${s.row})" style="
+            margin-left:8px;
+            border:none;
+            background:#f3f4f6;
+            padding:4px 8px;
+            border-radius:6px;
+            cursor:pointer;
+            font-size:12px;
+          ">✏️ Editar</button>
+        </div>`
+      : `<div class="srow">
+          <button class="sbtn ${effCls==='p'?'sp':''}" onclick="setSt(${s.row},'Presente',this)">
+            <span class="ico">✅</span><span class="lbl2">Presente</span>
+          </button>
+          <button class="sbtn ${effCls==='j'?'sj':''}" onclick="setSt(${s.row},'Justificou',this)">
+            <span class="ico">⚠️</span><span class="lbl2">Justificou</span>
+          </button>
+          <button class="sbtn ${effCls==='f'?'sf':''}" onclick="setSt(${s.row},'Falta',this)">
+            <span class="ico">❌</span><span class="lbl2">Falta</span>
+          </button>
         </div>`
     }
+
     <button class="expbtn${hasEvo?' open':''}" onclick="togEvo(this,${s.row})">
       <span>📝 Evolução da sessão</span><span class="arr">▼</span>
     </button>
+
     <div class="evoarea${hasEvo?' open':''}" id="ev-${s.row}">
       <div class="evolbl">Anotações / Evolução</div>
-      <textarea class="evoinput" placeholder="Descreva como foi a sessão..." rows="4"
-        ${s.locked?'readonly':''} oninput="draftEvo(${s.row},this.value)">${draftE[s.row]!==undefined?draftE[s.row]:(s.evolucao||'')}</textarea>
-      ${s.locked?'':`<button class="savebtn" id="sv-${s.row}" onclick="saveSession(${s.row})"><span>💾</span> Salvar sessão</button>`}
-    </div>`;
+      <textarea class="evoinput"
+        placeholder="Descreva como foi a sessão..."
+        rows="4"
+        ${s.locked?'readonly':''}
+        oninput="draftEvo(${s.row},this.value)"
+      >${draftE[s.row]!==undefined?draftE[s.row]:(s.evolucao||'')}</textarea>
+
+      ${s.locked?'':`
+        <button class="savebtn" id="sv-${s.row}" onclick="saveSession(${s.row})">
+          <span>💾</span> Salvar sessão
+        </button>`
+      }
+    </div>
+  `;
+
   return c;
 }
 
