@@ -98,6 +98,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--s100);color:var(--tp);min
 .si-j{background:#fef3c7}
 .si-n{background:var(--s200)}
 
+/* FUNDO DO CARD POR STATUS */
+.pc.bg-p { background: #f0fdf4; border-color: #bbf7d0; } /* verde */
+.pc.bg-f { background: #fef2f2; border-color: #fecaca; } /* vermelho */
+.pc.bg-j { background: #fffbeb; border-color: #fde68a; } /* amarelo */
+.pc.bg-n { background: var(--sur); } /* padrão */
+
 /* STATUS BUTTONS */
 .srow{display:flex;gap:6px;padding:0 16px 12px}
 .sbtn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;border-radius:var(--rsm);border:1.5px solid var(--bdr);background:var(--sur2);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .18s}
@@ -850,23 +856,23 @@ function renderAgenda(){
 
 function buildCard(s){
   const c=document.createElement('div');
-  
+
   const st=(s.status||'').toLowerCase();
-  
+
   let cls='n';
-  
-  if(st==='atendido') cls='p';           // verde
-  else if(st==='cancelado' || st==='desmarcado') cls='f'; // vermelho
-  else if(st==='chegou') cls='j';        // amarelo
-  else cls='n';                          // agendado
-  
+  if(st==='atendido') cls='p';
+  else if(st==='cancelado' || st==='desmarcado') cls='f';
+  else if(st==='chegou') cls='j';
+  else cls='n';
+
   const em={'p':'✅','f':'❌','j':'⚠️','n':'○'}[cls];
   const hasDraft=draftP[s.row]!==undefined;
   const effCls=hasDraft?({'Presente':'p','Falta':'f','Justificou':'j'}[draftP[s.row]]||cls):cls;
   const effEm={'p':'✅','f':'❌','j':'⚠️','n':'○'}[effCls];
 
-  c.className='pc'+(s.locked?' lkd':'');
+  c.className='pc bg-'+cls+(s.locked?' lkd':'');
   c.dataset.row=s.row;
+
   const hasEvo=!!(draftE[s.row]!==undefined?draftE[s.row]:s.evolucao);
 
   c.innerHTML=`
@@ -979,18 +985,44 @@ function editarSessao(row){
 // ── STATUS & EVO ──────────────────────────────────────────────────
 function setSt(row,presenca,btn){
   draftP[row]=presenca;
-  const card=document.querySelector(`[data-row="${row}"]`);if(!card)return;
+
+  const card=document.querySelector(`[data-row="${row}"]`);
+  if(!card) return;
+
   const pk=presenca.toLowerCase();
-  const cls=pk==='presente'?'p':pk==='falta'?'f':'j';
+
+  let cls='n';
+  if(pk==='presente') cls='p';
+  else if(pk==='falta') cls='f';
+  else if(pk.includes('justif')) cls='j';
+
   const em={'p':'✅','f':'❌','j':'⚠️'}[cls];
+
+  // botão ativo
   card.querySelectorAll('.sbtn').forEach(b=>b.classList.remove('sp','sf','sj'));
   btn.classList.add({'p':'sp','f':'sf','j':'sj'}[cls]);
+
+  // ícone
   card.querySelector('.si').className=`si si-${cls}`;
   card.querySelector('.si').textContent=em;
+
+  // barra
   card.querySelector('.csbar').className=`csbar cb-${cls}`;
+
+  // 🔥 fundo do card
+  card.classList.remove('bg-p','bg-f','bg-j','bg-n');
+  card.classList.add('bg-'+cls);
+
+  // abrir evolução automaticamente
   const ea=card.querySelector('.evoarea'),eb=card.querySelector('.expbtn');
-  if(ea&&!ea.classList.contains('open')){ea.classList.add('open');eb.classList.add('open');}
-  const sess=sessions.find(s=>s.row===row);if(sess)sess.presenca=presenca;
+  if(ea&&!ea.classList.contains('open')){
+    ea.classList.add('open');
+    eb.classList.add('open');
+  }
+
+  const sess=sessions.find(s=>s.row===row);
+  if(sess) sess.presenca=presenca;
+
   updSum(sessions.filter(s=>s.date===selDate));
 }
 
