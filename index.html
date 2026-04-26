@@ -860,10 +860,16 @@ function buildCard(s){
   const st=(s.status||'').toLowerCase();
 
   let cls='n';
-  if(st==='atendido') cls='p';
-  else if(st==='cancelado' || st==='desmarcado') cls='f';
-  else if(st==='chegou') cls='j';
-  else cls='n';
+  
+  if (st === 'atendido') {
+    cls = 'p';
+  } else if (st === 'cancelado' || st === 'desmarcado') {
+    cls = 'f';
+  } else if (st === 'chegou') {
+    cls = 'j';
+  } else {
+    cls = 'n';
+  }
 
   const em={'p':'✅','f':'❌','j':'⚠️','n':'○'}[cls];
   const hasDraft=draftP[s.row]!==undefined;
@@ -992,9 +998,14 @@ function setSt(row,presenca,btn){
   const pk=presenca.toLowerCase();
 
   let cls='n';
-  if(pk==='presente') cls='p';
-  else if(pk==='falta') cls='f';
-  else if(pk.includes('justif')) cls='j';
+
+  if (pk === 'presente') {
+    cls = 'p';
+  } else if (pk === 'falta') {
+    cls = 'f';
+  } else if (pk.includes('justif')) {
+    cls = 'j';
+  }
 
   const em={'p':'✅','f':'❌','j':'⚠️'}[cls];
 
