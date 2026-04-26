@@ -105,13 +105,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--s100);color:var(--tp);min
 
 /* ATENDIDO (verde leve) */
 .pc.bg-p {
-  background: #f0fdf4;
+  background:transparent;
   border: 1px solid #bbf7d0;
 }
 
 /* FALTA (vermelho leve) */
 .pc.bg-f {
-  background: #fef2f2;
+  background:transparent;
   border: 1px solid #fecaca;
 }
 
@@ -672,41 +672,50 @@ function renderAlertaFaltas(){
   }
 
   box.innerHTML = `
+  <div style="
+    background:rgba(255,255,255,0.04);
+    backdrop-filter:blur(6px);
+    border-radius:12px;
+    padding:12px;
+    font-size:13px;
+    border:1px solid rgba(255,255,255,0.08);
+  ">
     <div style="
-      background:#fff;
-      border-radius:10px;
-      padding:12px;
-      font-size:13px;
-      border:1px solid #e5e7eb;
+      font-weight:600;
+      margin-bottom:8px;
+      color:var(--ts);
     ">
-      <strong>⚠️ Monitoramento de faltas</strong>
-      <ul style="margin-top:8px;padding-left:18px;">
-        ${alertasHoje.map(p => {
-          let cor, label, icon;
-
-          if(p.nivel === 1){
-            cor = '#facc15'; // amarelo
-            label = '1 falta';
-            icon = '🟡';
-          } else if(p.nivel === 2){
-            cor = '#fb923c'; // laranja
-            label = '2 faltas consecutivas';
-            icon = '🟠';
-          } else {
-            cor = '#ef4444'; // vermelho
-            label = `${p.faltas} faltas consecutivas`;
-            icon = '🔴';
-          }
-
-          return `
-            <li style="margin-bottom:4px;">
-              ${icon} <strong style="color:${cor}">${p.nome}</strong> — ${label}
-            </li>
-          `;
-        }).join('')}
-      </ul>
+      ⚠️ Monitoramento de faltas
     </div>
-  `;
+
+    <ul style="padding-left:18px;margin:0;">
+      ${alertasHoje.map(p => {
+        let cor, label, icon;
+
+        if(p.nivel === 1){
+          cor = '#facc15';
+          label = '1 falta';
+          icon = '🟡';
+        } else if(p.nivel === 2){
+          cor = '#fb923c';
+          label = '2 faltas consecutivas';
+          icon = '🟠';
+        } else {
+          cor = '#ef4444';
+          label = `${p.faltas} faltas consecutivas`;
+          icon = '🔴';
+        }
+
+        return `
+          <li style="margin-bottom:6px;opacity:.9;">
+            ${icon} <strong style="color:${cor}">${p.nome}</strong>
+            <span style="color:var(--tm)">— ${label}</span>
+          </li>
+        `;
+      }).join('')}
+    </ul>
+  </div>
+`;
 }
 
 // ── LIMPA TELA EVOLUÇÃO ──────────────────────────────────────────────────
