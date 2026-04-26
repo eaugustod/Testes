@@ -129,6 +129,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--s100);color:var(--tp);min
 .sbtn.sp{border-color:#16a34a;background:#f0fdf4}.sbtn.sp .lbl2{color:#16a34a}
 .sbtn.sf{border-color:#dc2626;background:#fef2f2}.sbtn.sf .lbl2{color:#dc2626}
 .sbtn.sj{border-color:#d97706;background:transparent}.sbtn.sj .lbl2{color:#d97706}
+.sbtn-info{background:#f3f4f6;border:1.5px dashed #d1d5db;cursor:default;pointer-events:none;
+}
+
+.sbtn-info .lbl2{color:#6b7280;
+}
 
 /* STATUS BAR */
 .csbar{height:3px;width:100%}
@@ -962,13 +967,19 @@ function buildCard(s){
         </div>`
       : `<div class="srow">
           <button class="sbtn ${effCls==='p'?'sp':''}" onclick="setSt(${s.row},'Presente',this)">
-            <span class="ico">✅</span><span class="lbl2">Presente</span>
+            <span class="ico">✅</span>
+            <span class="lbl2">Presente</span>
           </button>
-          <button class="sbtn ${effCls==='j'?'sj':''}" onclick="setSt(${s.row},'Justificou',this)">
-            <span class="ico">⚠️</span><span class="lbl2">Justificou</span>
-          </button>
+        
+          <!-- 🔒 BOTÃO INFORMATIVO (SEM AÇÃO) -->
+          <div class="sbtn sbtn-info">
+            <span class="ico">🪑</span>
+            <span class="lbl2">Aguardando</span>
+          </div>
+        
           <button class="sbtn ${effCls==='f'?'sf':''}" onclick="setSt(${s.row},'Falta',this)">
-            <span class="ico">❌</span><span class="lbl2">Falta</span>
+            <span class="ico">❌</span>
+            <span class="lbl2">Falta</span>
           </button>
         </div>`
     }
@@ -1074,12 +1085,13 @@ function setSt(row,presenca,btn){
     cls = 'p';
   } else if (pk === 'falta') {
     cls = 'f';
-  } else if (pk.includes('justif')) {
-    cls = 'j';
-  }
+  } //else if (pk.includes('justif')) {
+    //cls = 'j';
+  //}
 
-  const em={'p':'✅','f':'❌','j':'⚠️'}[cls];
-
+  //const em={'p':'✅','f':'❌','j':'⚠️'}[cls];
+  const em={'p':'✅','f':'❌'}[cls] || '○';
+  
   // botão ativo
   card.querySelectorAll('.sbtn').forEach(b=>b.classList.remove('sp','sf','sj'));
   if(btn) btn.classList.add({'p':'sp','f':'sf','j':'sj'}[cls]);
