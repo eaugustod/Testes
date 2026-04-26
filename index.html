@@ -591,41 +591,56 @@ function switchView(v){
 function verificarFaltas(){
   const mapa = {};
 
-  sessions.forEach(s => {
-    const nome = s.patient;
-    if(!nome || nome === '—') return;
+  const dataRef = new Date(selDate);
+  const mes = dataRef.getMonth();
+  const ano = dataRef.getFullYear();
 
-    if(!mapa[nome]) mapa[nome] = [];
-    mapa[nome].push(s);
+  sessions.forEach(s => {
+    if(!s.patient || s.patient === '—') return;
+
+    const d = new Date(s.date);
+
+    if(d.getMonth() !== mes || d.getFullYear() !== ano) return;
+
+    if(!mapa[s.patient]) mapa[s.patient] = [];
+    mapa[s.patient].push(s);
   });
 
-  const pacientesAlerta = [];
+  const resultado = [];
 
   Object.entries(mapa).forEach(([nome, sessoes]) => {
 
-    // 🔹 filtrar apenas sessões ANTERIORES ao dia atual
-    const anteriores = sessoes
-      .filter(s => s.date < selDate)
-      .sort((a,b) => b.date.localeCompare(a.date)); // mais recente primeiro
+    // ordenar por data
+    sessoes.sort((a,b) => a.date.localeCompare(b.date));
 
-    // precisa ter pelo menos 2 anteriores
-    if(anteriores.length < 2) return;
+    let consecutivas = 0;
+    let maxConsecutivas = 0;
 
-    const ultimas2 = anteriores.slice(0,2);
+    sessoes.forEach(s => {
+      const st = (s.status || '').toLowerCase();
 
-    const s1 = (ultimas2[0].presenca || '').toLowerCase();
-    const s2 = (ultimas2[1].presenca || '').toLowerCase();
+      if(st === 'cancelado' || st === 'desmarcado'){
+        consecutivas++;
+        if(consecutivas > maxConsecutivas){
+          maxConsecutivas = consecutivas;
+        }
+      } else {
+        consecutivas = 0;
+      }
+    });
 
-    if(s1 === 'falta' && s2 === 'falta'){
-      pacientesAlerta.push({
+    if(maxConsecutivas > 0){
+      resultado.push({
         nome,
-        faltas: 2
+        nivel: maxConsecutivas >= 3 ? 3 :
+               maxConsecutivas === 2 ? 2 : 1,
+        faltas: maxConsecutivas
       });
     }
 
   });
 
-  return pacientesAlerta;
+  return resultado;
 }
 
 
@@ -634,7 +649,6 @@ function renderAlertaFaltas(){
   const alertas = verificarFaltas();
 
   const containerId = 'alertaFaltasBox';
-
   let box = document.getElementById(containerId);
 
   if(!box){
@@ -644,13 +658,11 @@ function renderAlertaFaltas(){
     document.getElementById('vAgenda').prepend(box);
   }
 
-  // 🔹 pacientes que TEM sessão no dia selecionado
   const pacientesHoje = sessions
     .filter(s => s.date === selDate)
     .map(s => s.patient);
 
-  // 🔹 só mostra alerta se paciente está HOJE
-  const alertasHoje = alertas.filter(p => 
+  const alertasHoje = alertas.filter(p =>
     pacientesHoje.includes(p.nome)
   );
 
@@ -661,18 +673,37 @@ function renderAlertaFaltas(){
 
   box.innerHTML = `
     <div style="
-      background:#fef2f2;
-      border:1px solid #fecaca;
-      color:#7f1d1d;
-      padding:12px;
+      background:#fff;
       border-radius:10px;
+      padding:12px;
       font-size:13px;
+      border:1px solid #e5e7eb;
     ">
-      <strong>🚨 Atenção: paciente com faltas consecutivas</strong>
+      <strong>⚠️ Monitoramento de faltas</strong>
       <ul style="margin-top:8px;padding-left:18px;">
-        ${alertasHoje.map(p => `
-          <li><strong>${p.nome}</strong> — 2 faltas consecutivas</li>
-        `).join('')}
+        ${alertasHoje.map(p => {
+          let cor, label, icon;
+
+          if(p.nivel === 1){
+            cor = '#facc15'; // amarelo
+            label = '1 falta';
+            icon = '🟡';
+          } else if(p.nivel === 2){
+            cor = '#fb923c'; // laranja
+            label = '2 faltas consecutivas';
+            icon = '🟠';
+          } else {
+            cor = '#ef4444'; // vermelho
+            label = `${p.faltas} faltas consecutivas`;
+            icon = '🔴';
+          }
+
+          return `
+            <li style="margin-bottom:4px;">
+              ${icon} <strong style="color:${cor}">${p.nome}</strong> — ${label}
+            </li>
+          `;
+        }).join('')}
       </ul>
     </div>
   `;
