@@ -663,7 +663,7 @@ function renderAlertaFaltas(){
     .map(s => s.patient);
 
   const alertasHoje = alertas.filter(p =>
-    pacientesHoje.includes(p.nome)
+    pacientesHoje.includes(p.nome) && p.nivel > 1
   );
 
   if(alertasHoje.length === 0){
@@ -685,7 +685,7 @@ function renderAlertaFaltas(){
       margin-bottom:8px;
       color:var(--ts);
     ">
-      ⚠️ Monitoramento de faltas
+      ⚠️ Pacientes com faltas recorrentes
     </div>
 
     <ul style="padding-left:18px;margin:0;">
