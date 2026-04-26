@@ -96,12 +96,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--s100);color:var(--tp);min
 .si-p{background:#dcfce7}
 .si-f{background:#fee2e2}
 .si-j{background:#fef3c7}
+.si-c{background:#fef3c7}
 .si-n{background:var(--s200)}
 
 /* FUNDO DO CARD POR STATUS */
 .pc.bg-p { background: var(--sur); border-color: #bbf7d0; } /* verde */
 .pc.bg-f { background: var(--sur); border-color: #fecaca; } /* vermelho */
-.pc.bg-j { background: var(--sur); border-color: #fde68a; } /* amarelo */
+.pc.bg-c { background: var(--sur); border-color: #fde68a; } /* amarelo */
 .pc.bg-n { background: var(--sur); } /* padrão */
 
 /* STATUS BUTTONS */
@@ -115,9 +116,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--s100);color:var(--tp);min
 
 /* STATUS BAR */
 .csbar{height:3px;width:100%}
-.cb-p{background:#16a34a}.cb-f{background:#dc2626}.cb-j{background:#d97706}.cb-n{background:transparent}
+.cb-p{background:#16a34a}.cb-f{background:#dc2626}.cb-j{background:#d97706}.cb-n{background:transparent}.cb-c{background:#d97706}
 
-/* EVOLUTION */
+  /* EVOLUTION */
 .evoarea{padding:0 16px 14px;display:none}
 .evoarea.open{display:block}
 .evolbl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--tm);margin-bottom:6px}
@@ -863,34 +864,35 @@ function renderAgenda(){
 }
 
 function buildCard(s){
-  const c=document.createElement('div');
+  const c = document.createElement('div');
 
-  const st=(s.status||'').toLowerCase();
+  const st = (s.status || '').toLowerCase();
 
-  let cls='n';
-  
+  // 🔹 NOVO: classe visual independente
+  let scls = 'n';
+
   if (st === 'atendido') {
-    cls = 'p';
+    scls = 'p';
   } else if (st === 'cancelado' || st === 'desmarcado') {
-    cls = 'f';
+    scls = 'f';
   } else if (st === 'chegou') {
-    cls = 'j';
+    scls = 'c'; // ← NOVO (não usa mais o j)
   } else {
-    cls = 'n';
+    scls = 'n';
   }
 
-  const em={'p':'✅','f':'❌','j':'⚠️','n':'○'}[cls];
+  const em = { p:'✅', f:'❌', c:'🟡', n:'○' }[scls];
   const hasDraft=draftP[s.row]!==undefined;
   const effCls=hasDraft?({'Presente':'p','Falta':'f','Justificou':'j'}[draftP[s.row]]||cls):cls;
   const effEm={'p':'✅','f':'❌','j':'⚠️','n':'○'}[effCls];
 
-  c.className='pc bg-'+cls+(s.locked?' lkd':'');
-  c.dataset.row=s.row;
+  c.className = 'pc bg-' + scls + (s.locked ? ' lkd' : '');
+  c.dataset.row = s.row;
 
-  const hasEvo=!!(draftE[s.row]!==undefined?draftE[s.row]:s.evolucao);
+  const hasEvo = !!(draftE[s.row] !== undefined ? draftE[s.row] : s.evolucao);
 
   c.innerHTML=`
-    <div class="csbar cb-${effCls}"></div>
+    <div class="csbar cb-${scls}"></div>
     <div class="cmain">
       <div class="tblk"><div class="ts2">${fmtT(s.tStart)}</div><div class="te">${fmtT(s.tEnd)}</div><div class="tdot"></div></div>
       <div class="pinfo">
@@ -901,7 +903,7 @@ function buildCard(s){
           ${s.proc?`<span class="mt">${s.proc}</span>`:''}
         </div>
       </div>
-      <div class="si si-${effCls}">${effEm}</div>
+      <div class="si si-${scls}">${em}</div>
     </div>
     ${s.locked
   ?`<div class="lkbadge">
@@ -1029,7 +1031,7 @@ function setSt(row,presenca,btn){
   card.querySelector('.csbar').className=`csbar cb-${cls}`;
 
   // 🔥 fundo do card
-  card.classList.remove('bg-p','bg-f','bg-j','bg-n');
+  card.classList.remove('bg-p','bg-f','bg-j','bg-n','bg-c');
   card.classList.add('bg-'+cls);
 
   // abrir evolução automaticamente
