@@ -736,8 +736,11 @@ async function fetchSessions(){
       const durStr = r.dur_min ? String(r.dur_min) : '';
       let presenca='';
       const st=(r.status||'').toLowerCase();
-      if(st==='atendido')                           presenca='Presente';
-      else if(st==='cancelado'||st==='desmarcado')  presenca='Falta';
+      
+      if(st==='atendido') presenca='Presente';
+      else if(st==='cancelado' || st==='desmarcado') presenca='Falta';
+      else if(st==='chegou') presenca='Justificou'; // vamos usar como amarelo
+      else presenca='';
       else if(st==='confirmado'||st==='agendado')   presenca='';
 
       // obs no agendamento = "tipo · processo · semana" (campo interno do index_sis)
@@ -847,8 +850,16 @@ function renderAgenda(){
 
 function buildCard(s){
   const c=document.createElement('div');
-  const pk=(s.presenca||'').toLowerCase();
-  const cls=pk==='presente'?'p':pk==='falta'?'f':pk.includes('justif')?'j':'n';
+  
+  const st=(s.status||'').toLowerCase();
+  
+  let cls='n';
+  
+  if(st==='atendido') cls='p';           // verde
+  else if(st==='cancelado' || st==='desmarcado') cls='f'; // vermelho
+  else if(st==='chegou') cls='j';        // amarelo
+  else cls='n';                          // agendado
+  
   const em={'p':'✅','f':'❌','j':'⚠️','n':'○'}[cls];
   const hasDraft=draftP[s.row]!==undefined;
   const effCls=hasDraft?({'Presente':'p','Falta':'f','Justificou':'j'}[draftP[s.row]]||cls):cls;
