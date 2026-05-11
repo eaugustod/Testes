@@ -858,6 +858,7 @@ async function fetchSessions(){
         presenca: presenca,
         evolucao: '',          // será preenchido pelo enrichFromHistorico
         status:   r.status||'agendado',
+        statusVisual: statusVisual,
         locked:   ['atendido','cancelado','desmarcado'].includes(st),
         profId:   r.prof_id||null,
         pac_id:   r.pac_id||null,  // carrega pac_id se existir na tabela
@@ -1035,9 +1036,26 @@ function buildCard(s){
           </button>
         
           <!-- 🪑 AGUARDANDO -->
-          <div class="sbtn sbtn-info ${isChegou ? 'on' : 'off'}">
-            <span class="ico">🪑</span>
-            <span class="lbl2">Aguardando</span>
+          <div class="sbtn sbtn-info ${
+              s.statusVisual === 'chegou' ? 'on' : 'off'
+            }">
+              <span class="ico">
+                ${
+                  s.statusVisual === 'chegou' ? '🟡' :
+                  s.statusVisual === 'confirmado' ? '✔️' :
+                  s.statusVisual === 'aguardando' ? '🪑' :
+                  '○'
+                }
+              </span>
+            
+              <span class="lbl2">
+                ${
+                  s.statusVisual === 'chegou' ? 'Chegou' :
+                  s.statusVisual === 'confirmado' ? 'Confirmado' :
+                  s.statusVisual === 'aguardando' ? 'Aguardando' :
+                  'Status'
+                }
+              </span>
           </div>
         
           <button class="sbtn ${effCls==='f'?'sf':''}" onclick="setSt(${s.row},'Falta',this)">
@@ -1392,6 +1410,28 @@ async function loadResumo(){
       const st = (r.status||'').toLowerCase();
       // Determina presença: prioriza historico, fallback no status do agendamento
       let presenca = '';
+      let statusVisual = '';
+      
+      if (st === 'atendido') {
+        presenca = 'Presente';
+        statusVisual = 'atendido';
+      
+      } else if (st === 'cancelado' || st === 'desmarcado') {
+        presenca = 'Falta';
+        statusVisual = 'falta';
+      
+      } else if (st === 'chegou') {
+        statusVisual = 'chegou';
+      
+      } else if (st === 'aguardando') {
+        statusVisual = 'aguardando';
+      
+      } else if (st === 'confirmado') {
+        statusVisual = 'confirmado';
+      
+      } else {
+        statusVisual = 'agendado';
+      }
       const h = histMap[r.data_iso+'_'+r.pac_id] || null;
       if(h){
         const c = typeof h.conteudo==='string' ? JSON.parse(h.conteudo) : (h.conteudo||{});
