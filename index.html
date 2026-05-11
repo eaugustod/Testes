@@ -826,19 +826,25 @@ async function fetchSessions(){
     rows.forEach((r)=>{
       if(!r.data_iso) return;
       const durStr = r.dur_min ? String(r.dur_min) : '';
-      let presenca='';
-      const st=(r.status||'').toLowerCase();
+      let presenca = '';
+      let statusVisual = '';
+      
+      const st = (r.status || '').toLowerCase();
       
       if (st === 'atendido') {
         presenca = 'Presente';
+        statusVisual = 'atendido';
       } else if (st === 'cancelado' || st === 'desmarcado') {
         presenca = 'Falta';
+        statusVisual = 'falta';
       } else if (st === 'chegou') {
-        presenca = 'Justificou'; // amarelo
-      } else if (st === 'confirmado' || st === 'agendado') {
-        presenca = '';
+        statusVisual = 'aguardando';
+      } else if (st === 'aguardando') {
+        statusVisual = 'aguardando';
+      } else if (st === 'confirmado') {
+        statusVisual = 'confirmado';
       } else {
-        presenca = '';
+        statusVisual = 'agendado';
       }
 
       // obs no agendamento = "tipo · processo · semana" (campo interno do index_sis)
